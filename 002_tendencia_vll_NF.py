@@ -50,8 +50,8 @@ def executa_procedure_sql():
     
     dados_conexao = (
         "Driver={SQL Server};"
-        "Server={db_server};"
-        "Database={db_name};"
+        "Server={secrets.db_server};"
+        "Database={secrets.db_name};"
         "UID={secrets.db_user};"
         "PWD={secrets.db_pass}"
     )
@@ -75,8 +75,8 @@ def montaExcelTendVll():
                     GROUP BY DATA, FILIAL'''
     dados_conexao = (
         "Driver={SQL Server};"
-        "Server={db_server};"
-        "Database={db_name};"
+        "Server={secrets.db_server};"
+        "Database={secrets.db_name};"
         "UID={secrets.db_user};"
         "PWD={secrets.db_pass}"
     )
@@ -395,8 +395,8 @@ def tira_comentario_procedure_nova_fibra_sql():
 
     dados_conexao = (
         "Driver={SQL Server};"
-        "Server={db_server};"
-        "Database={db_name};"
+        "Server={secrets.db_server};"
+        "Database={secrets.db_name};"
         "UID={secrets.db_user};"
         "PWD={secrets.db_pass}"
     )
@@ -679,8 +679,8 @@ def coloca_comentario_procedure_nova_fibra_sql():
 
     dados_conexao = (
         "Driver={SQL Server};"
-        "Server={db_server};"
-        "Database={db_name};"
+        "Server={secrets.db_server};"
+        "Database={secrets.db_name};"
         "UID={secrets.db_user};"
         "PWD={secrets.db_pass}"
     )
