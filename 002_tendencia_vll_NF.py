@@ -6,7 +6,7 @@
 # 6) salvar na rede - OK
 # 7) mandar por e-mail - OK
 
-import secrets
+import segredos
 import pyodbc
 from playwright.sync_api import sync_playwright
 from datetime import date, datetime
@@ -50,10 +50,10 @@ def executa_procedure_sql():
     
     dados_conexao = (
         "Driver={SQL Server};"
-        "Server={secrets.db_server};"
-        "Database={secrets.db_name};"
-        "UID={secrets.db_user};"
-        "PWD={secrets.db_pass}"
+        f"Server={segredos.db_server};"
+        f"Database={segredos.db_name};"
+        f"UID={segredos.db_user};"
+        f"PWD={segredos.db_pass}"
     )
     conexao = pyodbc.connect(dados_conexao)
     print("Conectado")
@@ -75,10 +75,10 @@ def montaExcelTendVll():
                     GROUP BY DATA, FILIAL'''
     dados_conexao = (
         "Driver={SQL Server};"
-        "Server={secrets.db_server};"
-        "Database={secrets.db_name};"
-        "UID={secrets.db_user};"
-        "PWD={secrets.db_pass}"
+        f"Server={segredos.db_server};"
+        f"Database={segredos.db_name};"
+        f"UID={segredos.db_user};"
+        f"PWD={segredos.db_pass}"
     )
     conexao = pyodbc.connect(dados_conexao)
     #print("Conectado")
@@ -105,8 +105,8 @@ def enviaEmaileAnexo():
     email = outlook.CreateItem(0)
 
     # configurar as informações do seu e-mail
-    email.To = secrets.lista_email_vll_nf_to
-    email.Cc = secrets.lista_email_vll_nf_cc
+    email.To = segredos.lista_email_vll_nf_to
+    email.Cc = segredos.lista_email_vll_nf_cc
     email.Subject = f"Projeção NOVA FIBRA - {hoje}"
     email.HTMLBody = f"""
     <p>Caros,</p>
@@ -395,10 +395,10 @@ def tira_comentario_procedure_nova_fibra_sql():
 
     dados_conexao = (
         "Driver={SQL Server};"
-        "Server={secrets.db_server};"
-        "Database={secrets.db_name};"
-        "UID={secrets.db_user};"
-        "PWD={secrets.db_pass}"
+        f"Server={segredos.db_server};"
+        f"Database={segredos.db_name};"
+        f"UID={segredos.db_user};"
+        f"PWD={segredos.db_pass}"
     )
     conexao = pyodbc.connect(dados_conexao)
     print("Conectado")
@@ -679,10 +679,10 @@ def coloca_comentario_procedure_nova_fibra_sql():
 
     dados_conexao = (
         "Driver={SQL Server};"
-        "Server={secrets.db_server};"
-        "Database={secrets.db_name};"
-        "UID={secrets.db_user};"
-        "PWD={secrets.db_pass}"
+        f"Server={segredos.db_server};"
+        f"Database={segredos.db_name};"
+        f"UID={segredos.db_user};"
+        f"PWD={segredos.db_pass}"
     )
     conexao = pyodbc.connect(dados_conexao)
     print("Conectado")
