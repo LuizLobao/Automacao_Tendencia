@@ -723,7 +723,7 @@ fim, down, ini = puxa_dts_cargas()
 dia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
 dia6162 = (fim[1].split(' ')[0]) #pega somente a data do segundo registro: 6162
 
-dia6162 = '18/10/2022'
+#dia6162 = '18/10/2022'
 print(f'Data do 6163: {dia6163}. Dia do 6162:{dia6162}')
 
 tentativas = 1

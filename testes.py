@@ -1,41 +1,51 @@
 import segredos
-import pandas as pd
 import pyodbc
-import time
+from playwright.sync_api import sync_playwright
 from datetime import date, datetime
+import time
+import pandas as pd
 import win32com.client as win32
+import plotly.express as px
 
 hoje = datetime.today().strftime('%d/%m/%Y')
-AAAAMMDD = datetime.today().strftime('%Y%m%d')
 print(hoje)
 
-def enviaEmaileAnexo():        
-    # criar a integração com o outlook
-    outlook = win32.Dispatch('outlook.application')
 
-    # criar um email
-    email = outlook.CreateItem(0)
 
-    # configurar as informações do seu e-mail
-    email.To = segredos.lista_email_vll_nf_to
-    email.Cc = segredos.lista_email_vll_nf_cc
-    email.Subject = f"Projeção NOVA FIBRA - {hoje}"
-    email.HTMLBody = f"""
-    <p>Caros,</p>
+def testepandas():
+    comando_sql='''
+				SELECT * FROM TBL_RE_BASERESULTADOS 
+                WHERE DATA = '202210' and 
+                tipo_indicador in ('real','tendência') and 
+                indbd = 'VL' and
+                grupo_plano in ('Fibra', 'Nova Fibra')
+                '''
 
-    <p>Segue o arquivo atualizado com a projeção de VLL da Nova Fibra calculada hoje: {hoje}</p>
-    <p></p>
-    <p></p>
+    dados_conexao = (
+        "Driver={SQL Server};"
+        f"Server={segredos.db_server};"
+        f"Database={segredos.db_name};"
+        f"UID={segredos.db_user};"
+        f"PWD={segredos.db_pass}"
+    )
+    conexao = pyodbc.connect(dados_conexao)
+    print("Conectado")
+    cursor = conexao.cursor()
+    df=pd.read_sql(comando_sql, conexao)
+    #print(df.head())
+    #print(df.tail())
+    pt_tabdin = df.pivot_table(
+                                    values="VALOR", 
+                                    index=["FILIAL"], 
+                                    columns="TIPO_INDICADOR", 
+                                    aggfunc=sum,
+                                    fill_value=0,
+                                    margins=True, margins_name="VL",
+                                    )
+    conexao.close()
+    print(pt_tabdin)
+    fig = px.bar(df, x='DATA', y='VALOR')
+    fig.show()
+    print('Conexão Fechada')
 
-    <p>Att,</p>
-    <p>Luiz Lobão</p>
-    """
-    anexo = (f'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Tend_VLL_Nova_Fibra_{AAAAMMDD}.xlsx')
-    email.Attachments.Add(anexo)
-
-    email.Send()
-    print("Email Enviado")
-
-enviaEmaileAnexo()
-
- 
+testepandas()
