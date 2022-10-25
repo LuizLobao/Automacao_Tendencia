@@ -58,7 +58,7 @@ menu_def = [
 ]
 
 layout_esquerda = [
-    [Image(filename='fusion.png')]
+   # [Image(filename='fusion.png')]
 ]
 layout_direita = [
     [Text(f'Olá {login}, seja bem vindo:')],                                                                                #Linha 0

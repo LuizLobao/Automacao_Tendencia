@@ -1,0 +1,4 @@
+*.exe
+*.pyc
+segredos.py
+debug.log
