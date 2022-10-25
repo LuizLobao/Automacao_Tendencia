@@ -44,10 +44,8 @@ def puxa_dts_cargas():
         return datas_fim, datas_down, datas_ini
 
 def executa_procedure_sql():
-    
-    #Procedure para rodar
-    storedProc = 'exec SP_PC_NOVA_FIBRA'
-    
+    #Procedure para rodar 'exec SP_PC_NOVA_FIBRA'
+        
     dados_conexao = (
         "Driver={SQL Server};"
         f"Server={segredos.db_server};"
@@ -61,8 +59,12 @@ def executa_procedure_sql():
     cursor = conexao.cursor()
     
     #executa procedure
-    cursor.execute(storedProc)
-    print(f"Procedure executada : {storedProc}")
+    inicio_procedure = datetime.today()
+    cursor.execute("{CALL SP_PC_NOVA_FIBRA}")
+    fim_procedure = datetime.today()
+    conexao.commit()
+
+    print(f"Procedure executada em {fim_procedure - inicio_procedure} tempo")
     
     conexao.close()
     print('Conexão Fechada')
@@ -716,41 +718,41 @@ def rotina_se_ok ():
 
     print('\x1b[1;32;41m' + 'CONCLUIDO' + '\x1b[0m')
 
-
-# 1) Verificar se bases rodaram no MONITOR DE CARGA - OK
-print('Verificando datas no Monitor de Cargas...')
-fim, down, ini = puxa_dts_cargas()
-dia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
-dia6162 = (fim[1].split(' ')[0]) #pega somente a data do segundo registro: 6162
-
-#dia6162 = '18/10/2022'
-print(f'Data do 6163: {dia6163}. Dia do 6162:{dia6162}')
-
-tentativas = 1
-while (hoje != dia6163) or (hoje != dia6162):
-    print('\x1b[1;32;41m' + 'Datas Diferentes. Esperando 5 minutos' + '\x1b[0m')
-    time.sleep(60) #1minutos
-    print('\x1b[1;32;41m' + 'Esperando 4 minutos' + '\x1b[0m')
-    time.sleep(60) #1minutos
-    print('\x1b[1;32;41m' + 'Esperando 3 minutos' + '\x1b[0m')
-    time.sleep(60) #1minutos
-    print('\x1b[1;32;41m' + 'Esperando 2 minutos' + '\x1b[0m')
-    time.sleep(60) #1minutos
-    print('\x1b[1;32;41m' + 'Esperando 1 minuto' + '\x1b[0m')
-    time.sleep(60) #1minuto
-    tentativas = tentativas + 1
-    print(f'Verificando datas no Monitor de Cargas...Tentativa número: {tentativas}')
-    fim, down, ini = puxa_dts_cargas()
-    ia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
-    dia6162 = (fim[1].split(' ')[0]) #pega somente a data do segundo registro: 6162
-    print(f'Data do 6163: {dia6163}. Dia do 6162:{dia6162}')
-
-
-if hoje == dia6163 == dia6162:
-    rotina_se_ok()
-    #print('ROTINA OK')
-else:
-    print('\x1b[1;32;41m' + 'ESCAPE Datas Diferentes. Continuar esperando' + '\x1b[0m')
+executa_procedure_sql()
+## 1) Verificar se bases rodaram no MONITOR DE CARGA - OK
+#print('Verificando datas no Monitor de Cargas...')
+#fim, down, ini = puxa_dts_cargas()
+#dia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
+#dia6162 = (fim[1].split(' ')[0]) #pega somente a data do segundo registro: 6162
+#
+##dia6162 = '18/10/2022'
+#print(f'Data do 6163: {dia6163}. Dia do 6162:{dia6162}')
+#
+#tentativas = 1
+#while (hoje != dia6163) or (hoje != dia6162):
+#    print('\x1b[1;32;41m' + 'Datas Diferentes. Esperando 5 minutos' + '\x1b[0m')
+#    time.sleep(60) #1minutos
+#    print('\x1b[1;32;41m' + 'Esperando 4 minutos' + '\x1b[0m')
+#    time.sleep(60) #1minutos
+#    print('\x1b[1;32;41m' + 'Esperando 3 minutos' + '\x1b[0m')
+#    time.sleep(60) #1minutos
+#    print('\x1b[1;32;41m' + 'Esperando 2 minutos' + '\x1b[0m')
+#    time.sleep(60) #1minutos
+#    print('\x1b[1;32;41m' + 'Esperando 1 minuto' + '\x1b[0m')
+#    time.sleep(60) #1minuto
+#    tentativas = tentativas + 1
+#    print(f'Verificando datas no Monitor de Cargas...Tentativa número: {tentativas}')
+#    fim, down, ini = puxa_dts_cargas()
+#    ia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
+#    dia6162 = (fim[1].split(' ')[0]) #pega somente a data do segundo registro: 6162
+#    print(f'Data do 6163: {dia6163}. Dia do 6162:{dia6162}')
+#
+#
+#if hoje == dia6163 == dia6162:
+#    #rotina_se_ok()
+#    print('ROTINA OK')
+#else:
+#    print('\x1b[1;32;41m' + 'ESCAPE Datas Diferentes. Continuar esperando' + '\x1b[0m')
     
 
 
