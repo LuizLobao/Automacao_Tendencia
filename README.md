@@ -1,7 +1,7 @@
 Ferramenta para Automatização das Tendências Diárias
 
 Objetivo:
- - Criar ferramenta visual para facilitar o processo diário de calculo e atualização das tendências
+ - Criar ferramenta visual para facilitar o processo diário de caalculo e atualização das tendências
  
 Funcionalidades a Desenvolver:
  - Layout em GUI para facilitar o processo de atualização
