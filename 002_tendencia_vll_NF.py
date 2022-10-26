@@ -59,13 +59,19 @@ def executa_procedure_sql():
     cursor = conexao.cursor()
     
     #executa procedure
-    inicio_procedure = datetime.today()
     cursor.execute("{CALL SP_PC_NOVA_FIBRA}")
-    fim_procedure = datetime.today()
     conexao.commit()
 
-    print(f"Procedure executada em {fim_procedure - inicio_procedure} tempo")
+    #colocar aqui um loop verificando se a procedure terminou de rodar
+	#print(f"Iniciando LOOP para verificar se a Procedure terminou de rodar")
+	#comando_sql = '''SELECT [PROCEDURE], INI_FIM, MAX(DATA_HORA) AS DATA_HORA
+	#				  FROM TBL_PC_TEMPO_PROCEDURES
+	#   			  WHERE [PROCEDURE] = 'SP_PC_BASES_SHAREPOINT'AND INI_FIM = 'FIM'
+	#				  GROUP BY [PROCEDURE], INI_FIM'''
+	#df=pd.read_sql(comando_sql, conexao)
     
+
+
     conexao.close()
     print('Conexão Fechada')
 
@@ -134,9 +140,18 @@ def tira_comentario_procedure_nova_fibra_sql():
 				SET @ANOMES = (SELECT DISTINCT DBO.FORMAT_DATE(DT_MES,'YYYYMM') FROM TBL_CG_NOVA_FIBRA_VL)
 
 				-----------------------------------------------------------------------------------------
+				-------------------- REGISTRO DE INICIO DE EXECUÇÃO -----------------------------
+				-----------------------------------------------------------------------------------------
+				INSERT INTO TBL_PC_TEMPO_PROCEDURES
+				SELECT
+				'SP_PC_NOVA_FIBRA' AS [PROCEDURE],
+				'INICIO' AS INI_FIM,
+				GETDATE() AS DATA_HORA
+
+				-----------------------------------------------------------------------------------------
 				-------------------- INSERE VALORES NA TABELA DE NOVA FIBRA -----------------------------
 				-----------------------------------------------------------------------------------------
-				/*teste2*/
+				
 
 
 				DELETE FROM TBL_RE_BASE_NOVA_FIBRA WHERE ANOMES = @ANOMES AND TIPO_INDICADOR = 'REAL'
@@ -393,6 +408,14 @@ def tira_comentario_procedure_nova_fibra_sql():
 
 				EXEC [dbo].[SP_PC_CG_IND_Acompanhamento_Diario_Final] @ANOMES
 
+				-----------------------------------------------------------------------------------------
+				-------------------- REGISTRO DE FIM DE EXECUÇÃO -----------------------------
+				-----------------------------------------------------------------------------------------
+				INSERT INTO TBL_PC_TEMPO_PROCEDURES
+				SELECT
+				'SP_PC_NOVA_FIBRA' AS [PROCEDURE],
+				'FIM' AS INI_FIM,
+				GETDATE() AS DATA_HORA
 				'''
 
     dados_conexao = (
@@ -416,6 +439,15 @@ def coloca_comentario_procedure_nova_fibra_sql():
 
 				DECLARE @ANOMES AS VARCHAR(6)
 				SET @ANOMES = (SELECT DISTINCT DBO.FORMAT_DATE(DT_MES,'YYYYMM') FROM TBL_CG_NOVA_FIBRA_VL)
+
+				-----------------------------------------------------------------------------------------
+				-------------------- REGISTRO DE INICIO DE EXECUÇÃO -----------------------------
+				-----------------------------------------------------------------------------------------
+				INSERT INTO TBL_PC_TEMPO_PROCEDURES
+				SELECT
+				'SP_PC_NOVA_FIBRA' AS [PROCEDURE],
+				'INICIO' AS INI_FIM,
+				GETDATE() AS DATA_HORA
 
 				-----------------------------------------------------------------------------------------
 				-------------------- INSERE VALORES NA TABELA DE NOVA FIBRA -----------------------------
@@ -677,6 +709,15 @@ def coloca_comentario_procedure_nova_fibra_sql():
 
 				EXEC [dbo].[SP_PC_CG_IND_Acompanhamento_Diario_Final] @ANOMES
 
+				-----------------------------------------------------------------------------------------
+				-------------------- REGISTRO DE INICIO DE EXECUÇÃO -----------------------------
+				-----------------------------------------------------------------------------------------
+				INSERT INTO TBL_PC_TEMPO_PROCEDURES
+				SELECT
+				'SP_PC_NOVA_FIBRA' AS [PROCEDURE],
+				'FIM' AS INI_FIM,
+				GETDATE() AS DATA_HORA
+
 				'''
 
     dados_conexao = (
@@ -697,16 +738,16 @@ def coloca_comentario_procedure_nova_fibra_sql():
 def rotina_se_ok ():
     print('\x1b[1;31;42m' + 'Datas dos arquivos 6163 e 6162 iguais a data de Hoje. Continuando o processo de tendência...'+ '\x1b[0m')
     # 2) Rodar procedure com codigo "descomentado"
-    print('Alterando a Procedure SP_PC_NOVA_FIBRA - descomentando o bloco de tendência')
-    tira_comentario_procedure_nova_fibra_sql()
+    #print('Alterando a Procedure SP_PC_NOVA_FIBRA - descomentando o bloco de tendência')
+    #tira_comentario_procedure_nova_fibra_sql()
 
     # 3) Rodar procedure SP_PC_NOVA_FIBRA - OK
-    print('Executando a Procedure SP_PC_NOVA_FIBRA')
-    executa_procedure_sql()    
+    #print('Executando a Procedure SP_PC_NOVA_FIBRA')
+    #executa_procedure_sql()    
 
     # 4) Rodar procedure com codigo comentado - OK
-    print('Alterando a Procedure SP_PC_NOVA_FIBRA - comentando o bloco de tendência')
-    coloca_comentario_procedure_nova_fibra_sql()
+    #print('Alterando a Procedure SP_PC_NOVA_FIBRA - comentando o bloco de tendência')
+    #coloca_comentario_procedure_nova_fibra_sql()
 
     # 5) Rodar query e colocar no excel - OK  |  # 6) salvar na rede - OK
     print('Montando Excel com tabela dinamica e salvando na rede')
@@ -750,6 +791,7 @@ while (hoje != dia6163) or (hoje != dia6162):
 
 if hoje == dia6163 == dia6162:
     rotina_se_ok()
+	#tira_comentario_procedure_nova_fibra_sql()
     print('ROTINA OK')
 else:
     print('\x1b[1;32;41m' + 'ESCAPE Datas Diferentes. Continuar esperando' + '\x1b[0m')
