@@ -1,11 +1,3 @@
-# 1) Verificar se bases rodaram no MONITOR DE CARGA - OK
-# 2) Rodar procedure com codigo "descomentado" - OK
-# 3) Rodar procedure SP_PC_NOVA_FIBRA - OK
-# 4) Rodar procedure com codigo comentado - OK
-# 5) Rodar query e colocar no excel - OK
-# 6) salvar na rede - OK
-# 7) mandar por e-mail - OK
-
 import segredos
 import pyodbc
 from playwright.sync_api import sync_playwright
@@ -53,12 +45,14 @@ def executa_procedure_sql():
 		f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
-	print("Conectado para PROCEDURE")
+	print("Conectado ao banco para executar PROCEDURE")
 
 	cursor = conexao.cursor()
 	
 	#executar procedure
-	cursor.execute("{CALL SP_PC_NOVA_FIBRA}")
+	dh_inicio_proc = datetime.today().strftime('%Y%m%d %H:%M:%S')
+	print(f'Hora inicio execução procedure: {dh_inicio_proc}')
+	cursor.execute('SET NOCOUNT ON; EXEC SP_PC_NOVA_FIBRA')
 	conexao.commit()
 
 	############# LOOP PARA VERIFICAR FIM DA PROCEDURE #############
@@ -84,7 +78,7 @@ def executa_procedure_sql():
 			row = cursor.fetchone()
 			dh_fim_proc = row.DATA_HORA.strftime('%Y%m%d %H:%M:%S')
 
-			print(f'Fim: {dh_fim_proc}')
+			print(f'Hora fim da execução da procedure: {dh_fim_proc}')
 
 			if (dh_fim_proc > dh_inicio_proc):
 				print('Procedure concluida. Continuando...')
@@ -96,9 +90,7 @@ def executa_procedure_sql():
 			tentativas = tentativas + 1
 		return
 	
-	procedure = 'SP_PC_NOVA_FIBRA'
-	dh_inicio_proc = datetime.today().strftime('%Y%m%d %H:%M:%S')
-	print(f'inicio : {dh_inicio_proc}')
+	
 	verifica_fim_procedure(procedure, dh_inicio_proc)
 	############# FIM DO LOOP PARA VERIFICAR FIM DA PROCEDURE #############
 	
@@ -154,7 +146,7 @@ def enviaEmaileAnexo():
 	<p></p>
 
 	<p>Att,</p>
-	<p>Luiz Lobão</p>
+	<p>Lobão, Luiz</p>
 	"""
 	anexo = (f'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Tend_VLL_Nova_Fibra_{AAAAMMDD}.xlsx')
 	email.Attachments.Add(anexo)
@@ -456,7 +448,7 @@ def tira_comentario_procedure_nova_fibra_sql():
 		f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
-	print("Conectado")
+	print("Conectado ao banco para alterar a procedure - retirar comentários")
 	cursor = conexao.cursor()
 	cursor.execute(comando_sql)
 	conexao.commit()
@@ -758,7 +750,7 @@ def coloca_comentario_procedure_nova_fibra_sql():
 		f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
-	print("Conectado")
+	print("Conectado ao banco para alterar a procedure - colocar comentários")
 	cursor = conexao.cursor()
 	cursor.execute(comando_sql)
 	conexao.commit()
@@ -766,59 +758,62 @@ def coloca_comentario_procedure_nova_fibra_sql():
 	print('Conexão Fechada')
 
 def rotina_se_ok ():
-	print('\x1b[1;31;42m' + 'Datas dos arquivos 6163 e 6162 iguais a data de Hoje. Continuando o processo de tendência...'+ '\x1b[0m')
+	print('\x1b[1;33;44m' + 'Datas dos arquivos 6163 e 6162 iguais a data de Hoje. Continuando o processo de tendência...'+ '\x1b[0m')
+	
 	# 2) Rodar procedure com codigo "descomentado"
-	print('Alterando a Procedure SP_PC_NOVA_FIBRA - descomentando o bloco de tendência')
+	print('\x1b[1;33;44m' + 'Alterando a Procedure SP_PC_NOVA_FIBRA - descomentando o bloco de tendência'+ '\x1b[0m')
 	tira_comentario_procedure_nova_fibra_sql()
 
 	# 3) Rodar procedure SP_PC_NOVA_FIBRA - OK
-	print('Executando a Procedure SP_PC_NOVA_FIBRA')
+	print('\x1b[1;33;44m' + 'Executando a Procedure SP_PC_NOVA_FIBRA'+ '\x1b[0m')
 	executa_procedure_sql()	
 
 	# 4) Rodar procedure com codigo comentado - OK
-	print('Alterando a Procedure SP_PC_NOVA_FIBRA - comentando o bloco de tendência')
+	print('\x1b[1;33;44m' + 'Alterando a Procedure SP_PC_NOVA_FIBRA - comentando o bloco de tendência'+ '\x1b[0m')
 	coloca_comentario_procedure_nova_fibra_sql()
 
 	# 5) Rodar query e colocar no excel - OK  |  # 6) salvar na rede - OK
-	print('Montando Excel com tabela dinamica e salvando na rede')
+	print('\x1b[1;33;44m' + 'Montando Excel com tabela dinamica e salvando na rede'+ '\x1b[0m')
 	montaExcelTendVll()
 
 	# 7) mandar por e-mail - OK
-	print('Enviando e-mail')
+	print('\x1b[1;33;44m' + 'Enviando e-mail'+ '\x1b[0m')
 	enviaEmaileAnexo()
 
 	print('\x1b[1;32;41m' + 'CONCLUIDO' + '\x1b[0m')
 
-
-# 1) Verificar se bases rodaram no MONITOR DE CARGA - OK
-print('Verificando datas no Monitor de Cargas...')
-fim, down, ini = puxa_dts_cargas()
-dia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
-dia6162 = (fim[1].split(' ')[0]) #pega somente a data do segundo registro: 6162
-
-#dia6162 = '18/10/2022'
-print(f'Data do 6163: {dia6163}. Data do 6162:{dia6162}')
-
-tentativas = 1
-while (hoje != dia6163) or (hoje != dia6162):
-	tempo_espera = 5
-	tempo_inicial = 0
-	
-	while tempo_inicial < tempo_espera:
-		print(f'\x1b[1;32;41m' + 'Datas Diferentes. Esperando {tempo_espera - tempo_inicial} minutos' + '\x1b[0m')
-		time.sleep(60) #1minutos
-		tempo_inicial = tempo_inicial + 1
-	
-	tentativas = tentativas + 1
-	print(f'Verificando datas no Monitor de Cargas...Tentativa número: {tentativas}')
+def principal():
+	# 1) Verificar se bases rodaram no MONITOR DE CARGA - OK
+	print(f'\x1b[1;32;42m' + 'Verificando datas no Monitor de Cargas...'+ '\x1b[0m')
 	fim, down, ini = puxa_dts_cargas()
-	ia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
+	dia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
 	dia6162 = (fim[1].split(' ')[0]) #pega somente a data do segundo registro: 6162
-	print(f'Data do 6163: {dia6163}. Dia do 6162:{dia6162}')
+
+	#dia6162 = '18/10/2022'
+	print(f'Data do 6163: {dia6163}. Data do 6162:{dia6162}')
+
+	tentativas = 1
+	while (hoje != dia6163) or (hoje != dia6162):
+		tempo_espera = 5
+		tempo_inicial = 0
+
+		while tempo_inicial < tempo_espera:
+			print(f'\x1b[1;32;41m' + 'Datas Diferentes. Esperando {tempo_espera - tempo_inicial} minutos' + '\x1b[0m')
+			time.sleep(60) #1minutos
+			tempo_inicial = tempo_inicial + 1
+
+		tentativas = tentativas + 1
+		print(f'Verificando datas no Monitor de Cargas...Tentativa número: {tentativas}')
+		fim, down, ini = puxa_dts_cargas()
+		ia6163 = (fim[0].split(' ')[0]) #pega somente a data do primeiro registro: 6163
+		dia6162 = (fim[1].split(' ')[0]) #pega somente a data do segundo registro: 6162
+		print(f'Data do 6163: {dia6163}. Dia do 6162:{dia6162}')
 
 
-if hoje == dia6163 == dia6162:
-	print('Arquivos disponíveis. Continuando o processo...')
-	rotina_se_ok()
-else:
-	print('\x1b[1;32;41m' + 'ESCAPE Datas Diferentes. Continuar esperando' + '\x1b[0m')
+	if hoje == dia6163 == dia6162:
+		print(f'\x1b[1;32;40m' + 'Arquivos disponíveis. Continuando o processo...' + '\x1b[0m')
+		rotina_se_ok()
+	else:
+		print('\x1b[1;32;41m' + 'ESCAPE Datas Diferentes. Continuar esperando' + '\x1b[0m')
+
+principal()
