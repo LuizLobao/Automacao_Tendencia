@@ -11,12 +11,12 @@ use_custom_titlebar = True if sg.running_trinket() else False
 
 def make_window(theme=None):
 
-    NAME_SIZE = 23
+    NAME_SIZE = 59
 
 
     def name(name):
         dots = NAME_SIZE-len(name)-2
-        return sg.Text(name + ' ' + '•'*dots, size=(NAME_SIZE,1), justification='r',pad=(0,0), font='Courier 10')
+        return sg.Text(name + ' ' + '_'*dots, size=(NAME_SIZE,1), justification='l',pad=(0,0), font='Courier 10')
 
     sg.theme(theme)
 
@@ -31,6 +31,29 @@ def make_window(theme=None):
     treedata.Insert("", '_A_', 'Tree Item 1', [1234], )
     treedata.Insert("", '_B_', 'B', [])
     treedata.Insert("_A_", '_A1_', 'Sub Item 1', ['can', 'be', 'anything'], )
+
+    layout_esquerda = [
+                       [sg.Text('Rotinas para Tendência')],
+                       [name('Verificar Disponibilidade de Arquivos'), sg.Button('atualizar', k='-MON_CARGA-')],
+                       [sg.Table([['BOV 6163','22/10/2022 09:26','22/10/2022 09:36','22/10/2022 10:26'], 
+                                  ['BOV 6162','22/10/2022 09:26','22/10/2022 09:36','22/10/2022 10:26'],
+                                  ['BOV 9012','22/10/2022 09:26','',''],
+                                  ['BOV 3456','22/10/2022 09:26','',''],
+                                  ['BOV 7890','22/10/2022 09:26','',''],
+                                  ['BOV 9876','22/10/2022 09:26','',''],
+                                  ['Dem. Gross','X','Y','Z']], ['Arquivo','Download','Inicio Carga','Fim Carga'], num_rows=7, justification='l')],
+                        [sg.Text('')],
+                        [name('Processo VLL Nova Fibra (6162 e 6163)'), sg.Button('iniciar', disabled=True)],
+                        [sg.Output(s=(40,3))],
+                        [name('Processo Demonstrativo Gross'), sg.Button('iniciar', disabled=True)],
+                        [sg.Output(s=(40,3))],
+                        [name('Processo VL/VLL Legado'), sg.Button('iniciar', disabled=True)],
+                        [sg.Output(s=(40,3)), sg.Button('abrir excel', disabled=True)],
+                        [name('Iguala Real e Tendência'), sg.Button('iniciar', disabled=True)],
+                        ]
+
+
+    layout_direita = []
 
     layout_l = [
                 [name('Text'), sg.Text('Text')],
@@ -66,12 +89,13 @@ def make_window(theme=None):
                 [name('Sizegrip'), sg.Sizegrip()]  ]
 
     # Note - LOCAL Menu element is used (see about for how that's defined)
-    layout = [[Menu([['File', ['Exit']], ['Edit', ['Edit Me', ]]],  k='-CUST MENUBAR-',p=0)],
-              [sg.T('PySimpleGUI Elements - Use Combo to Change Themes', font='_ 14', justification='c', expand_x=True)],
-              [sg.Checkbox('Use Custom Titlebar & Menubar', use_custom_titlebar, enable_events=True, k='-USE CUSTOM TITLEBAR-', p=0)],
-              [sg.Col(layout_l, p=0), sg.Col(layout_r, p=0)]]
+    layout = [[Menu([['Arquivo', ['Sair']], ['Editar', ['Edit Me', ]],['Sobre']],  k='-CUST MENUBAR-',p=0)],
+              [sg.T('Sistema de Automações de Rotinas - Atividades Lobão', font='_ 14', justification='c', expand_x=True)],
+              [sg.T('Atividades de Rotinas Diárias', font='_ 14', justification='c', expand_x=True)],
+              #[sg.Checkbox('Use Custom Titlebar & Menubar', use_custom_titlebar, enable_events=True, k='-USE CUSTOM TITLEBAR-', p=0)],
+              [sg.Col(layout_esquerda, p=0),sg.Col(layout_l, p=0), sg.Col(layout_r, p=0)]]
 
-    window = sg.Window('The PySimpleGUI Element List', layout, finalize=True, right_click_menu=sg.MENU_RIGHT_CLICK_EDITME_VER_EXIT, keep_on_top=True, use_custom_titlebar=use_custom_titlebar)
+    window = sg.Window('Sistema de Automações de Rotinas - Luiz Lobão', layout, finalize=True, right_click_menu=sg.MENU_RIGHT_CLICK_EDITME_VER_EXIT, keep_on_top=True, use_custom_titlebar=use_custom_titlebar)
 
     window['-PBAR-'].update(30)                                                     # Show 30% complete on ProgressBar
     window['-GRAPH-'].draw_image(data=sg.EMOJI_BASE64_HAPPY_JOY, location=(0,50))   # Draw something in the Graph Element
