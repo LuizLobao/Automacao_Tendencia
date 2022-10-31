@@ -46,7 +46,9 @@ def executa_procedure_sql():
     inicio_procedure = datetime.today()
     #parametros = ("202210")
     parametros = datetime.today().strftime('%Y%m')
-    cursor.execute("{CALL SP_PC_Insert_Tendencia_Auto_Fibra (?)}", parametros)
+    print(parametros)
+    #cursor.execute("{CALL SP_PC_Insert_Tendencia_Auto_Fibra (?)}", parametros)
+    cursor.execute(f'SET NOCOUNT ON; EXEC SP_PC_Insert_Tendencia_Auto_Fibra {parametros}')
     fim_procedure = datetime.today()
     conexao.commit()
 
@@ -55,11 +57,25 @@ def executa_procedure_sql():
     conexao.close()
     print('Conexão Fechada')
 
+
 fim = puxa_dts_cargas()
 
-print(f'BOV 1058: {fim["BOV_1058.TXT"].split(" ")[0]}')
-print(f'BOV 1059: {fim["BOV_1059.TXT"].split(" ")[0]}')
-print(f'BOV 1064: {fim["BOV_1064.TXT"].split(" ")[0]}')
-print(f'BOV 1065: {fim["BOV_1065.TXT"].split(" ")[0]}')
-print(f'BOV 1066: {fim["BOV_1066.TXT"].split(" ")[0]}')
-print(f'BOV 1067: {fim["BOV_1067.TXT"].split(" ")[0]}')
+BOV_1058 = (f'{fim["BOV_1058.TXT"].split(" ")[0]}')
+BOV_1059 = (f'{fim["BOV_1059.TXT"].split(" ")[0]}')
+BOV_1064 = (f'{fim["BOV_1064.TXT"].split(" ")[0]}')
+BOV_1065 = (f'{fim["BOV_1065.TXT"].split(" ")[0]}')
+BOV_1066 = (f'{fim["BOV_1066.TXT"].split(" ")[0]}')
+BOV_1067 = (f'{fim["BOV_1067.TXT"].split(" ")[0]}')
+
+
+print(f'HOJE    : {hoje}')
+print(f'BOV_1058: {BOV_1058}')
+print(f'BOV_1059: {BOV_1059}')
+print(f'BOV_1064: {BOV_1064}')
+print(f'BOV_1065: {BOV_1065}')
+print(f'BOV_1066: {BOV_1066}')
+print(f'BOV_1067: {BOV_1067}')
+
+if hoje == BOV_1058 == BOV_1059 == BOV_1064 == BOV_1065 == BOV_1066 == BOV_1067:
+    print('CONTINUANDO')
+    executa_procedure_sql()

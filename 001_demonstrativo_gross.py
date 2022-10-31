@@ -15,7 +15,7 @@ arquivo1 = 'Demonstrativo Gross'
 
 # Verificar data de Modificação antes de Realizar a Cópia do Arquivo
 def data_mod_arquivo():
-    arquivo = f'Y:\{arquivo1}.xlsb'
+    arquivo = (f'Y:\{arquivo1}.xlsb')
     modificado = time.strftime('%Y-%m-%d', time.gmtime(os.path.getmtime(arquivo)))
     return (modificado)
 # Realiza a copia do Arquivo para a pasta de Donwload local renomeando o arquivo

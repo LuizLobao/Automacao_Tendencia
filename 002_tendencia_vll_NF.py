@@ -36,7 +36,8 @@ def puxa_dts_cargas():
 		return datas_fim, datas_down, datas_ini
 
 def executa_procedure_sql():
-			
+	
+
 	dados_conexao = (
 		"Driver={SQL Server};"
 		f"Server={segredos.db_server};"
@@ -50,6 +51,7 @@ def executa_procedure_sql():
 	cursor = conexao.cursor()
 	
 	#executar procedure
+	procedure = 'SP_PC_NOVA_FIBRA'
 	dh_inicio_proc = datetime.today().strftime('%Y%m%d %H:%M:%S')
 	print(f'Hora inicio execução procedure: {dh_inicio_proc}')
 	cursor.execute('SET NOCOUNT ON; EXEC SP_PC_NOVA_FIBRA')
