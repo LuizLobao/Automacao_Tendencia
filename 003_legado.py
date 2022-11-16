@@ -47,6 +47,7 @@ def executa_procedure_sql():
     #parametros = ("202210")
     parametros = datetime.today().strftime('%Y%m')
     print(parametros)
+    print('\x1b[1;33;44m' + 'Executando a Procedure SP_PC_Insert_Tendencia_Auto_Fibra'+ '\x1b[0m')
     #cursor.execute("{CALL SP_PC_Insert_Tendencia_Auto_Fibra (?)}", parametros)
     cursor.execute(f'SET NOCOUNT ON; EXEC SP_PC_Insert_Tendencia_Auto_Fibra {parametros}')
     fim_procedure = datetime.today()
