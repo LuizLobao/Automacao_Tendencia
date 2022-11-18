@@ -1127,6 +1127,7 @@ def executa_procedure_sql():
     parametros = datetime.today().strftime('%Y%m')
     print(parametros)
     print('\x1b[1;33;44m' + 'Executando a Procedure SP_PC_BASES_SHAREPOINT '+ '\x1b[0m')
+    print(f'Iniciando execução em: {inicio_procedure}')
     cursor.execute(f'SET NOCOUNT ON; EXEC SP_PC_BASES_SHAREPOINT  {parametros}')
     fim_procedure = datetime.today()
     conexao.commit()
@@ -1137,6 +1138,6 @@ def executa_procedure_sql():
     print('Conexão Fechada')
 
 
-#ATIVAR_TEND_TABLEAU_teste_Jan22()
-#executa_procedure_sql()
-#ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
+ATIVAR_TEND_TABLEAU_teste_Jan22()
+executa_procedure_sql()
+ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()

@@ -1,10 +1,6 @@
 import segredos
 import pyodbc
-from playwright.sync_api import sync_playwright
 from datetime import date, datetime
-import pandas as pd
-import win32com.client as win32
-import plotly.express as px
 import time
 
 
@@ -37,5 +33,16 @@ def executa_procedure_sql(nome_procedure, param):
 
 
 param = datetime.today().strftime('%Y%m')
+
+
+
+proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_Tendencia_porRegiao'
+executa_procedure_sql(proc, param)
+
+
 proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
+executa_procedure_sql(proc, param)
+
+
+proc = 'SP_PC_TBL_RE_RELATORIO_RC_V2_TEND'
 executa_procedure_sql(proc, param)
