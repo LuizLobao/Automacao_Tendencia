@@ -27,9 +27,8 @@ def puxa_dts_cargas():
         navegador.close()
         return datafim
 
-def executa_procedure_sql():
-    #Procedure para rodar 'SP_PC_Insert_Tendencia_Auto_Fibra AAAAMM'
-        
+def executa_procedure_sql(nome_procedure, param):
+   
     dados_conexao = (
         "Driver={SQL Server};"
         f"Server={segredos.db_server};"
@@ -38,25 +37,21 @@ def executa_procedure_sql():
         f"PWD={segredos.db_pass}"
     )
     conexao = pyodbc.connect(dados_conexao)
-    print("Conectado")
+    print('\x1b[1;33;42m' + 'Conexão realizada ao banco de dados' + '\x1b[0m')
 
     cursor = conexao.cursor()
     
     #executa procedure
     inicio_procedure = datetime.today()
-    #parametros = ("202210")
-    parametros = datetime.today().strftime('%Y%m')
-    print(parametros)
-    print('\x1b[1;33;44m' + 'Executando a Procedure SP_PC_Insert_Tendencia_Auto_Fibra'+ '\x1b[0m')
-    #cursor.execute("{CALL SP_PC_Insert_Tendencia_Auto_Fibra (?)}", parametros)
-    cursor.execute(f'SET NOCOUNT ON; EXEC SP_PC_Insert_Tendencia_Auto_Fibra {parametros}')
-    fim_procedure = datetime.today()
+    print('\x1b[1;33;44m' + f'Executando a Procedure {nome_procedure} para o parâmetro: {param} '+ '\x1b[0m')
+    print(f'Iniciando execução em: {inicio_procedure}')
+    cursor.execute(f'SET NOCOUNT ON; EXEC {nome_procedure}  {param}')
     conexao.commit()
-
+    fim_procedure = datetime.today()
     print(f"Procedure executada em {fim_procedure - inicio_procedure} tempo")
     
     conexao.close()
-    print('Conexão Fechada')
+    print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
 
 
 fim = puxa_dts_cargas()
@@ -79,4 +74,6 @@ print(f'BOV_1067: {BOV_1067}')
 
 if hoje == BOV_1058 == BOV_1059 == BOV_1064 == BOV_1065 == BOV_1066 == BOV_1067:
     print('CONTINUANDO')
-    executa_procedure_sql()
+    param = datetime.today().strftime('%Y%m')
+    executa_procedure_sql('SP_PC_Insert_Tendencia_Auto_Fibra',param)
+    

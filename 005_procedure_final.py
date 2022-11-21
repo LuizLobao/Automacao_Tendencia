@@ -1108,7 +1108,7 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
 	conexao.close()
 	print('Conexão Fechada')
 
-def executa_procedure_sql():
+def executa_procedure_sql(nome_procedure, param):
    
     dados_conexao = (
         "Driver={SQL Server};"
@@ -1118,26 +1118,26 @@ def executa_procedure_sql():
         f"PWD={segredos.db_pass}"
     )
     conexao = pyodbc.connect(dados_conexao)
-    print("Conectado")
+    print('\x1b[1;33;42m' + 'Conexão realizada ao banco de dados' + '\x1b[0m')
 
     cursor = conexao.cursor()
     
     #executa procedure
     inicio_procedure = datetime.today()
-    parametros = datetime.today().strftime('%Y%m')
-    print(parametros)
-    print('\x1b[1;33;44m' + 'Executando a Procedure SP_PC_BASES_SHAREPOINT '+ '\x1b[0m')
+    print('\x1b[1;33;44m' + f'Executando a Procedure {nome_procedure} para o parâmetro: {param} '+ '\x1b[0m')
     print(f'Iniciando execução em: {inicio_procedure}')
-    cursor.execute(f'SET NOCOUNT ON; EXEC SP_PC_BASES_SHAREPOINT  {parametros}')
-    fim_procedure = datetime.today()
+    cursor.execute(f'SET NOCOUNT ON; EXEC {nome_procedure}  {param}')
     conexao.commit()
-
+    fim_procedure = datetime.today()
     print(f"Procedure executada em {fim_procedure - inicio_procedure} tempo")
     
     conexao.close()
-    print('Conexão Fechada')
+    print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
 
+
+
+param = datetime.today().strftime('%Y%m')
 
 ATIVAR_TEND_TABLEAU_teste_Jan22()
-executa_procedure_sql()
+executa_procedure_sql('SP_PC_BASES_SHAREPOINT',param)
 ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
