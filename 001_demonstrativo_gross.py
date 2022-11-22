@@ -2,10 +2,10 @@
 #SE DATA DO ARQUIVO = HOJE, COPIAR PARA A PASTA DE REDE
 #CRIAR TABELAS DINAMICAS PARA INSTALAÇÃO E PARA MIGRAÇÃO
 
+import pandas as pd
 import shutil,os,time
 from telnetlib import theNULL
 from datetime import date, datetime
-import pandas as pd
 from openpyxl import load_workbook
 
 hoje = datetime.today().strftime('%Y-%m-%d')
