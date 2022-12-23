@@ -31,7 +31,8 @@ def executa_procedure_sql(nome_procedure, param):
     print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
 
 
-param = datetime.today().strftime('%Y%m')
+#param = datetime.today().strftime('%Y%m')
+param = '202211'
 executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_FIBRA_EMPRESARIAL',param)
 executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_FIBRA_VAREJO',param)
 executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_NOVA_FIBRA',param)

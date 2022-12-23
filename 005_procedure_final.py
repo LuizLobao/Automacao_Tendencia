@@ -1134,10 +1134,26 @@ def executa_procedure_sql(nome_procedure, param):
     conexao.close()
     print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
 
-
+def atualiza_TB_VALIDA_CARGA_TENDENCIA():
+	comando_sql='update TB_VALIDA_CARGA_TENDENCIA set DATA_CARGA = convert(varchar, getdate(), 120 )'
+	dados_conexao = (
+		"Driver={SQL Server};"
+		f"Server={segredos.db_server};"
+		f"Database={segredos.db_name};"
+		f"UID={segredos.db_user};"
+		f"PWD={segredos.db_pass}"
+	)
+	conexao = pyodbc.connect(dados_conexao)
+	print("Conectado ao banco para dar update")
+	cursor = conexao.cursor()
+	cursor.execute(comando_sql)
+	conexao.commit()
+	conexao.close()
+	print('Conexão Fechada')
 
 param = datetime.today().strftime('%Y%m')
 
 ATIVAR_TEND_TABLEAU_teste_Jan22()
 executa_procedure_sql('SP_PC_BASES_SHAREPOINT',param)
 ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
+#atualiza_TB_VALIDA_CARGA_TENDENCIA()

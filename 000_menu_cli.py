@@ -1,3 +1,7 @@
+#TODO trocar query digitada dentro da def por um arquivo SQL
+#TODO Salvar status de cada etapa. Só rodar a seguinte se a anterior ja rodou
+#TODO estudar a possibilidade de passar uma lista de PROCEDURES e rodar em Loop - desta forma realiza 1 unica conexao
+
 import shutil,os,time
 import time
 import win32com.client as win32
@@ -8,38 +12,120 @@ from telnetlib import theNULL
 from datetime import date, datetime
 from openpyxl import load_workbook
 from playwright.sync_api import sync_playwright
+import subprocess
+from tqdm import tqdm
 
+#FIXME caso deixe o programa rodando de um dia para o outro a variavel não atualiza - causando problemas no dia seguinte 
 hoje = datetime.today().strftime('%d/%m/%Y')
 AAAAMMDD = datetime.today().strftime('%Y%m%d')
+resposta = ''
 
+def menu():
+	subprocess.run('cls', shell=True)
+	print('----------------- Menu de Automacao de Atividades -----------------')
+	print('')
+	print('1) Verificar as datas no MONITOR DE CARGA e Demonstrativo do Gross')
+	print('2) Copiar o Demonstrativo do Gross e montar tabela dinâmica')
+	print('3) Executar processo da Nova Fibra')
+	print('4) Executar procedures para o Legado')
+	print('5) Update Tendências = Real')
+	print('6) Procedures Finais - usar depois de atualizar a tendência manualmente')
+	print('7) Procedures Receita Contratada')
+	print('8) Sair')
+	print('-------------------------------------------------------------------')
+	selecionada =  input(('Selecione uma das opções acima: #'))
+	print(f'A opção selecionda foi: {selecionada}')
+	return selecionada
 
-def data_mod_arquivo(caminho):   # Verificar data de Modificação antes de Realizar a Cópia do Arquivo
-    modificado = time.strftime('%d/%m/%Y', time.gmtime(os.path.getmtime(caminho)))
-    return (modificado)
+def data_mod_arquivo():
+	arquivo1 = 'Demonstrativo Gross'
+	arquivo = (f'Y:\{arquivo1}.xlsb')
+	modificado = time.strftime('%d/%m/%Y', time.gmtime(os.path.getmtime(arquivo)))
+	return (modificado)
 
-def puxa_dts_cargas():   #Verifica data das bases no Monitor de Carga
+def puxa_dts_cargas(em_loop):
+	dicio = {"arquivo":"data","HOJE":hoje}
+	with sync_playwright() as p:
+
+		navegador = p.chromium.launch(headless=True)
+		pagina = navegador.new_page()
+		pagina.goto("http://10.20.83.116/aplicacao/monitor/")
+		linha = 1
+		with tqdm(total=93) as barra_progresso:
+			while linha <= 93:
+					arquivo=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[9]').text_content())
+					DataFim=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[8]').text_content())
+					#FIXME criar verificação para quando a data vier fazia - split causando erro
+					if DataFim == '':
+						DataFim = '01/01/1900 00:00:00'
+					Status=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[6]').text_content())
+					#print(arquivo)
+					if Status == 'Carga realizada' or Status == 'Carga em andamento':
+						dicio.update({arquivo:DataFim})
+					#else :
+					#	DataFim == '00/00/0000 00:00:00'
+					#	dicio.update({arquivo:DataFim})
+					linha += 1
+					barra_progresso.update(1)
+		navegador.close()
 	
-    with sync_playwright() as p:
-        navegador = p.chromium.launch(headless=True)
-        pagina = navegador.new_page()
-        pagina.goto("http://10.20.83.116/aplicacao/monitor/")
-        
-        datafim = {pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[10]/td[9]').text_content() : pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[10]/td[8]').text_content(),
-                   pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[7]/td[9]').text_content() : pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[7]/td[8]').text_content(),
-                   pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[9]/td[9]').text_content() : pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[9]/td[8]').text_content(),
-                   pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[8]/td[9]').text_content() : pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[8]/td[8]').text_content(),
-                   pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[12]/td[9]').text_content() : pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[12]/td[8]').text_content(),
-                   pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[11]/td[9]').text_content() : pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[11]/td[8]').text_content(),   
-                   pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[82]/td[9]').text_content() : pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[82]/td[8]').text_content(),
-                   pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[83]/td[9]').text_content() : pagina.locator('xpath = //*[@id="mytable"]/tbody/tr[83]/td[8]').text_content()
-                   }
-        navegador.close()
-        return datafim
+	dataDemostrativoGross = data_mod_arquivo()
+	
+	
+	BOV_1067 = (f'{dicio["BOV_1067.TXT"].split(" ")[0]}')
+	BOV_1058 = (f'{dicio["BOV_1058.TXT"].split(" ")[0]}')
+	BOV_1059 = (f'{dicio["BOV_1059.TXT"].split(" ")[0]}')
+	BOV_1065 = (f'{dicio["BOV_1065.TXT"].split(" ")[0]}')
+	BOV_1064 = (f'{dicio["BOV_1064.TXT"].split(" ")[0]}')
+	BOV_6162 = (f'{dicio["HADOOP_6162.TXT"].split(" ")[0]}')
+	BOV_6163 = (f'{dicio["HADOOP_6163.TXT"].split(" ")[0]}')
+
+	print(f"1067: {BOV_1067}")
+	print(f"1058: {BOV_1058}")
+	print(f"1059: {BOV_1059}")
+	print(f"1065: {BOV_1065}")
+	print(f"1064: {BOV_1064}")
+	print(f"6162: {BOV_6162}")
+	print(f"6163: {BOV_6163}")
+	print(f'Demonstrativo Gross: {dataDemostrativoGross}')
+
+	if hoje == BOV_1067 == BOV_1058 == BOV_1059 == BOV_1065 == BOV_1064 == BOV_6162 == BOV_6163:
+		print('Todos os arquivos da BOV têm a data de hoje...podemos continuar')
+	else:
+		print('Um ou mais arquivos do BOV NÃO têm a data de hoje...aguardar')
+		colocar_puxa_dts_carga_em_loop(em_loop)
+			
+def colocar_puxa_dts_carga_em_loop(em_loop):
+	if em_loop == 'n' or em_loop == 'N':
+		resposta = input('Gostaria de colocar o check em Loop ? (s/n):')
+		if resposta == 's' or resposta == 'S' or em_loop == 's' or em_loop == 'S':
+			print('Esperando 300 segundos = 5 min')
+			time.sleep(60) #60 segundos
+			print('Esperando 240 segundos = 4 min')
+			time.sleep(60) #60 segundos
+			print('Esperando 180 segundos = 3 min')
+			time.sleep(60) #60 segundos
+			print('Esperando 120 segundos = 2 min')
+			time.sleep(60) #60 segundos
+			print('Esperando 60 segundos = 1 min')
+			time.sleep(60) #60 segundos
+			puxa_dts_cargas('s')
+	if em_loop == 's' or em_loop == 'S':
+		print('Esperando 300 segundos = 5 min')
+		time.sleep(60) #60 segundos
+		print('Esperando 240 segundos = 4 min')
+		time.sleep(60) #60 segundos
+		print('Esperando 180 segundos = 3 min')
+		time.sleep(60) #60 segundos
+		print('Esperando 120 segundos = 2 min')
+		time.sleep(60) #60 segundos
+		print('Esperando 60 segundos = 1 min')
+		time.sleep(60) #60 segundos
+		puxa_dts_cargas('s')
 
 def copia_arquivo_renomeia():
     shutil.copy(r"Y:\\Demonstrativo Gross.xlsb", fr'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_{AAAAMMDD}.xlsb')
-    print('Arquivo copiado!')
-
+    
 def monta_tabdin_demonstrativo_gross():
     excel_file = f'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_{AAAAMMDD}.xlsb'
     dest_filename = f'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_{AAAAMMDD}.xlsx'
@@ -65,294 +151,8 @@ def monta_tabdin_demonstrativo_gross():
         pt_instalacao.to_excel(writer, sheet_name="TabDin",startcol=0, startrow=0)
         pt_migracao.to_excel(writer, sheet_name="TabDin",startcol=6, startrow=0)
 
-    print('Tabelas dinamicas concluidas!')
-
-def tira_comentario_procedure_nova_fibra_sql():
-	comando_sql='''
-				ALTER PROCEDURE [dbo].[SP_PC_NOVA_FIBRA] AS
-
-				DECLARE @ANOMES AS VARCHAR(6)
-				SET @ANOMES = (SELECT DISTINCT DBO.FORMAT_DATE(DT_MES,'YYYYMM') FROM TBL_CG_NOVA_FIBRA_VL)
-
-				-----------------------------------------------------------------------------------------
-				-------------------- REGISTRO DE INICIO DE EXECUÇÃO -----------------------------
-				-----------------------------------------------------------------------------------------
-				INSERT INTO TBL_PC_TEMPO_PROCEDURES
-				SELECT
-				'SP_PC_NOVA_FIBRA' AS [PROCEDURE],
-				'INICIO' AS INI_FIM,
-				GETDATE() AS DATA_HORA
-
-				-----------------------------------------------------------------------------------------
-				-------------------- INSERE VALORES NA TABELA DE NOVA FIBRA -----------------------------
-				-----------------------------------------------------------------------------------------
-				
-
-
-				DELETE FROM TBL_RE_BASE_NOVA_FIBRA WHERE ANOMES = @ANOMES AND TIPO_INDICADOR = 'REAL'
-
-				INSERT INTO TBL_RE_BASE_NOVA_FIBRA
-
-				SELECT /*DISTINCT*/ 'VL' AS INDBD ,DBO.FORMAT_DATE(DT_ENVIO_PEDIDO,'YYYYMM') AS ANOMES ,dbo.fn_Remover_Acentos(NO_MUNICIPIO) AS NO_MUNICIPIO ,NU_FILIAL ,LEFT(DT_ENVIO_PEDIDO,10) AS DATA ,NO_CANAL_PLANEJAMENTO ,NO_VELOCIDADE
-								,NO_CLASSE_PRODUTO ,1 AS VALOR ,DS_SITUACAO_ORDEM ,NO_TIPO_MEIO_PAGAMENTO ,CD_PDV_SAP ,CD_OFERTA ,NO_OFERTA ,DT_ULTIMA_MODIFICACAO ,VL_TOTAL_RECORRENTE_OFERTA
-								,MATRICULA_DO_VENDEDOR ,'REAL' AS TIPO_INDICADOR ,'VAREJO' AS SEGMENTO
-
-				-- 07.06.22 RETIRADO O DISTINCT DA QUERY POIS FOI IDENTIFICADO QUE ESTAVAM EXPURGANDO VENDAS QUE NÃO DEVERIAM SER EXPURGADAS
-
-				FROM TBL_CG_NOVA_FIBRA_VL
-
-				WHERE IN_TESTE = '0' AND IN_BSIM = '0' AND DBO.FORMAT_DATE(DT_ENVIO_PEDIDO,'YYYYMMDD') <> DBO.FORMAT_DATE(GETDATE(),'YYYYMMDD') 
-
-				UNION ALL
-
-				SELECT /*DISTINCT*/ 'GROSS' AS INDBD ,DBO.FORMAT_DATE(DT_ATIVACAO,'YYYYMM') AS ANOMES ,dbo.fn_Remover_Acentos(NO_MUNICIPIO) AS NO_MUNICIPIO ,NU_FILIAL ,LEFT(DT_ATIVACAO,10) AS DATA ,NO_CANAL_PLANEJAMENTO ,NO_VELOCIDADE
-								,NO_CLASSE_PRODUTO ,1 AS VALOR ,DS_SITUACAO_ORDEM ,NO_TIPO_MEIO_PAGAMENTO ,CD_PDV_SAP ,CD_OFERTA ,NO_OFERTA ,DT_ULTIMA_MODIFICACAO ,VL_TOTAL_RECORRENTE_OFERTA
-								,MATRICULA_DO_VENDEDOR ,'REAL' AS TIPO_INDICADOR ,'VAREJO' AS SEGMENTO
-
-				-- 07.06.22 RETIRADO O DISTINCT DA QUERY POIS FOI IDENTIFICADO QUE ESTAVAM EXPURGANDO VENDAS QUE NÃO DEVERIAM SER EXPURGADAS
-
-				FROM TBL_CG_NOVA_FIBRA_GROSS
-
-				WHERE IN_TESTE = '0' AND IN_BSIM = '0' AND DBO.FORMAT_DATE(DT_ATIVACAO,'YYYYMMDD') <> DBO.FORMAT_DATE(GETDATE(),'YYYYMMDD') 
-
-				-- COMENTAR PARA NÃO MUDAR A TENDÊNCIA NAS CARGAS DAS PARCIAIS ....
-				
-				----------------------------------------------
-				------EXECUTA CÁLCULO DE TENDÊNCIA (VLL)------
-				----------------------------------------------
-
-				EXEC sp_pc_tend_nova_fibra
-
-				----------------------------------------------------------------------------------
-				-----------------INÍCIO PROCESSO DE INSERÇÃO DA TENDÊNCIA-------------------------
-				----------------------------------------------------------------------------------
-
-				declare @MAIOR_DATA INTEGER
-				declare @MAIOR_DATA_MES INTEGER
-
-					select
-							@MAIOR_DATA_MES = CONVERT(VARCHAR(8),DateAdd(Day,-1,Dateadd(Month,1, Convert(char(08),CONVERT(date, max(DATA)), 126)+'01')),112)
-						  from TBL_RE_BaseResultadoDiario
-						  WHERE LEFT(DATA,6) = @ANOMES AND GRUPO_PLANO = 'NOVA FIBRA' AND INDBD = 'VL'
-
-					select
-							@MAIOR_DATA = DBO.FORMAT_DATE(MAX(DATA),'YYYYMMDD')
-						  from TBL_RE_BASE_NOVA_FIBRA
-						  WHERE ANOMES = @ANOMES AND INDBD = 'VL' AND TIPO_INDICADOR = 'REAL'
-
-
-					PRINT '-----------------------------------------------------------------------------------------'
-					PRINT '-			INSERINDO TENDÊNCIA NAS TABELAS RE_RESULTADOS   MÊS: '+@ANOMES
-					PRINT '-----------------------------------------------------------------------------------------'
-
-					PRINT '-----------------------------------------------------------------------------------------'
-					PRINT '-			VAREJO'
-					PRINT '-----------------------------------------------------------------------------------------'
-
-				--------------------------------
-				--DROP/CREATE TABELA DE FATOR
-				--------------------------------
-
-				IF OBJECT_ID('TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA', 'U') IS NOT NULL
-				DROP TABLE TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA
-
-
-				SELECT * into TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA
-
-				 FROM (
-				
-				SELECT DISTINCT B.NO_CANAL_PLANEJAMENTO,
-								B.NU_FILIAL,
-								B.NO_MUNICIPIO,
-								CASE WHEN ((C.CANAL_RB IS NULL) OR (C.CANAL_RB IN ('S2S', 'Outros', 'TLV Outros'))) THEN 'Outros Nacionais'
-								ELSE C.CANAL_RB END AS CANAL_RB
-				FROM TBL_RE_BASE_NOVA_FIBRA AS B
-				LEFT JOIN TBL_RE_DP_CanaisRelatorioBernardo AS C ON B.NO_CANAL_PLANEJAMENTO = C.CANAL_FINAL
-				WHERE ANOMES = @ANOMES AND INDBD = 'VL' ) A
-
-				LEFT JOIN (
-				
-				SELECT filial, municipio, canal, SUM(TEND)/sum(realizado) as fator FROM (
-				
-				SELECT data, dia_semana, filial, municipio, canal, qtd as tend,
-					   case when realizado = 1 then qtd end as realizado
-					   FROM tbl_pc_tend_nova_fibra ) TEND_NF group by filial, municipio, canal ) F
-
-					ON A.CANAL_RB = F.canal AND
-					   A.NU_FILIAL = F.filial AND
-					   A.NO_MUNICIPIO = F.municipio
-
-				------------------------------------------------------------------
-				--IGUALANDO TENDÊNCIA AO REALIZADO NO CASO DE MÊS FECHADO
-				------------------------------------------------------------------
-
-					IF @MAIOR_DATA = @MAIOR_DATA_MES
-						BEGIN
-							UPDATE TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA SET FATOR = 1
-							PRINT '----------------TENDÊNCIA IGUALADA AO REALIZADO----------------'
-						END
-
-				-------------------------------------
-				--INSERT NA TBL_RE_BASE_NOVA_FIBRA
-				-------------------------------------
-
-				DELETE FROM [dbo].[TBL_RE_BASE_NOVA_FIBRA]
-					WHERE TIPO_INDICADOR = 'TENDÊNCIA' AND ANOMES = @ANOMES
-					AND INDBD = 'VL' AND SEGMENTO = 'VAREJO'
-
-				INSERT INTO [dbo].[TBL_RE_BASE_NOVA_FIBRA]
-						   ([INDBD]
-							,[ANOMES]
-							,[NO_MUNICIPIO]
-							,[NU_FILIAL]
-							,[DATA]
-							,[NO_CANAL_PLANEJAMENTO]
-							,[NO_VELOCIDADE]
-							,[NO_CLASSE_PRODUTO]
-							,[VALOR]
-							,[DS_SITUACAO_ORDEM]
-							,[NO_TIPO_MEIO_PAGAMENTO]
-							,[CD_PDV_SAP]
-							,[CD_OFERTA]
-							,[NO_OFERTA]
-							,[DT_ULTIMA_MODIFICACAO]
-							,[vl_total_recorrente_oferta]
-							,[matricula_do_vendedor]
-							,[TIPO_INDICADOR]
-							,[SEGMENTO]
-							)
-					SELECT 
-							[INDBD]
-							,[ANOMES]
-							,A.[NO_MUNICIPIO]
-							,A.[NU_FILIAL]
-							,[DATA]
-							,A.[NO_CANAL_PLANEJAMENTO]
-							,[NO_VELOCIDADE]
-							,[NO_CLASSE_PRODUTO]
-							,ISNULL((A.VALOR * F.fator),A.VALOR) AS [VALOR]
-							,[DS_SITUACAO_ORDEM]
-							,[NO_TIPO_MEIO_PAGAMENTO]
-							,[CD_PDV_SAP]
-							,[CD_OFERTA]
-							,[NO_OFERTA]
-							,[DT_ULTIMA_MODIFICACAO]
-							,[vl_total_recorrente_oferta]
-							,[matricula_do_vendedor]
-							,'TENDÊNCIA' AS [TIPO_INDICADOR]
-							,[SEGMENTO]
-					FROM [dbo].[TBL_RE_BASE_NOVA_FIBRA] A
-					LEFT JOIN TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA F ON
-					   A.NO_CANAL_PLANEJAMENTO = F.NO_CANAL_PLANEJAMENTO AND
-					   A.NU_FILIAL = F.filial AND
-					   A.NO_MUNICIPIO = F.municipio
-					WHERE TIPO_INDICADOR = 'REAL' AND ANOMES = @ANOMES
-						AND INDBD = 'VL' AND SEGMENTO = 'VAREJO'
-
-				---------------------------------------
-				--DROP TABELA TEMPORÁRIA DE FATOR
-				---------------------------------------
-
-				IF OBJECT_ID('TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA', 'U') IS NOT NULL
-				DROP TABLE TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA
-
-				----------------------------------------------------------------------------------
-				-------------------FIM PROCESSO DE INSERÇÃO DA TENDÊNCIA--------------------------
-				----------------------------------------------------------------------------------
-				
-				-----------------------------------------------------------------------------------------
-				--- INSERE VALORES NA BASE RESULTADOS - ADICIONADO POR NATÁLIA MOREIRA EM 30/11/2021 ----
-				----------------------------------------------------------------------------------------- 
-
-				DELETE  FROM TBL_RE_BASERESULTADOS
-				WHERE  DATA = @ANOMES AND TIPO_INDICADOR IN ('REAL','TENDÊNCIA') AND GRUPO_PLANO = 'NOVA FIBRA'
-
-				INSERT INTO TBL_RE_BASERESULTADOS
-
-				SELECT INDBD , TIPO_INDICADOR ,ANOMES AS DATA ,NO_CANAL_PLANEJAMENTO AS CANAL_BOV ,NO_CANAL_PLANEJAMENTO AS CANAL_PARA ,CD_PDV_SAP AS COD_SAP ,NU_FILIAL AS FILIAL 
-					   ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END AS DDD ,'NOVA FIBRA' AS GRUPO_PLANO ,'' AS PLANO ,'VA' AS SEGMENTO ,'FIBRA' AS PACOTE ,SUM(VALOR) AS VALOR 
-					   ,NO_CANAL_PLANEJAMENTO AS CANAL_FINAL ,CD_OFERTA AS CAMPANHA ,'NA' HL ,MATRICULA_DO_VENDEDOR AS VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT) AS ARPU 
-					   ,'' AS PLANO_GERENCIAL ,'NI' AS ZONA_COMPETICAO ,'' AS PLANO_OFERTA ,'' AS PORTABILIDADE ,'' AS MULTIPRODUTO ,'ALONE' AS IND_COMBO ,'N' AS PEDIDO_UNICO
-
-				FROM TBL_RE_BASE_NOVA_FIBRA A
-
-				LEFT JOIN TBL_RE_DP_MUNICIPIO_DDD B
-				ON A.NU_FILIAL = B.UF AND A.NO_MUNICIPIO = B.CIDADE
-
-				LEFT JOIN TBL_RE_DP_FILIAL_DDD C
-				ON A.NU_FILIAL = C.UF
-
-				WHERE ANOMES = @ANOMES AND
-					  SEGMENTO = 'VAREJO' AND
-					  TIPO_INDICADOR IN ('REAL', 'TENDÊNCIA')
-
-				GROUP BY INDBD ,TIPO_INDICADOR, ANOMES ,NO_CANAL_PLANEJAMENTO ,NO_CANAL_PLANEJAMENTO ,CD_PDV_SAP ,NU_FILIAL ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END ,NO_CANAL_PLANEJAMENTO ,CD_OFERTA 
-						 ,MATRICULA_DO_VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT)
-
-
-				---------------------- INSERE O REAL COMO TENDÊNCIA (PARA O GROSS) --------------------------------------
-				/*
-				INSERT INTO TBL_RE_BASERESULTADOS 
-
-				SELECT INDBD ,'TENDÊNCIA' AS TIPO_INDICADOR ,ANOMES AS DATA ,NO_CANAL_PLANEJAMENTO AS CANAL_BOV ,NO_CANAL_PLANEJAMENTO AS CANAL_PARA ,CD_PDV_SAP AS COD_SAP ,NU_FILIAL AS FILIAL 
-					   ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END AS DDD ,'NOVA FIBRA' AS GRUPO_PLANO ,'' AS PLANO ,'VA' AS SEGMENTO ,'FIBRA' AS PACOTE ,SUM(VALOR) AS VALOR 
-					   ,NO_CANAL_PLANEJAMENTO AS CANAL_FINAL ,CD_OFERTA AS CAMPANHA ,'NA' HL ,MATRICULA_DO_VENDEDOR AS VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT) AS ARPU 
-					   ,'' AS PLANO_GERENCIAL ,'NI' AS ZONA_COMPETICAO ,'' AS PLANO_OFERTA ,'' AS PORTABILIDADE ,'' AS MULTIPRODUTO ,'ALONE' AS IND_COMBO ,'N' AS PEDIDO_UNICO
-
-				FROM TBL_RE_BASE_NOVA_FIBRA A
-
-				LEFT JOIN TBL_RE_DP_MUNICIPIO_DDD B
-				ON A.NU_FILIAL = B.UF AND A.NO_MUNICIPIO = B.CIDADE
-
-				LEFT JOIN TBL_RE_DP_FILIAL_DDD C
-				ON A.NU_FILIAL = C.UF
-
-				WHERE ANOMES = @ANOMES AND
-					  SEGMENTO = 'VAREJO' AND
-					  TIPO_INDICADOR IN ('REAL') AND
-					  INDBD = 'GROSS'
-
-				GROUP BY INDBD ,ANOMES ,NO_CANAL_PLANEJAMENTO ,NO_CANAL_PLANEJAMENTO ,CD_PDV_SAP ,NU_FILIAL ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END ,NO_CANAL_PLANEJAMENTO ,CD_OFERTA 
-						 ,MATRICULA_DO_VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT)*/
-
-				---------------------- INSERE VALORES NA BASE DIÁRIA -------------------------------------
-
-				DELETE FROM DBO.TBL_RE_BASERESULTADODIARIO
-				WHERE  LEFT(DATA,6) = @ANOMES AND GRUPO_PLANO = 'NOVA FIBRA'
-
-				INSERT INTO TBL_RE_BASERESULTADODIARIO 
-
-				SELECT INDBD ,REPLACE(DATA,'-','') AS DATA ,NO_CANAL_PLANEJAMENTO AS CANAL_BOV ,NO_CANAL_PLANEJAMENTO AS CANAL_PARA ,'' AS REGIONAL ,NU_FILIAL AS FILIAL 
-					   ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END AS DDD ,CD_PDV_SAP AS COD_SAP ,'NOVA FIBRA' AS GRUPO_PLANO ,'' AS PLANO ,SUM(VALOR) AS QTD ,NO_CANAL_PLANEJAMENTO AS CANAL_FINAL 
-					   ,'FIBRA' AS PACOTE ,CD_OFERTA AS CAMPANHA ,'NA' AS HL ,MATRICULA_DO_VENDEDOR AS VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT) AS ARPU 
-					   ,'' AS PLANO_GERENCIAL ,'NI' AS ZONA_COMPETICAO ,'' AS PORTABILIDADE ,'ALONE' AS IND_COMBO ,'N' AS PEDIDO_UNICO
-
-				FROM TBL_RE_BASE_NOVA_FIBRA A
-
-				LEFT JOIN TBL_RE_DP_MUNICIPIO_DDD B
-				ON A.NU_FILIAL = B.UF AND A.NO_MUNICIPIO = B.CIDADE
-
-				LEFT JOIN TBL_RE_DP_FILIAL_DDD C
-				ON A.NU_FILIAL = C.UF
-
-				WHERE ANOMES = @ANOMES AND TIPO_INDICADOR = 'REAL'
-
-				GROUP BY INDBD ,REPLACE(DATA,'-','') ,NO_CANAL_PLANEJAMENTO ,NO_CANAL_PLANEJAMENTO ,NU_FILIAL ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END ,CD_PDV_SAP ,NO_CANAL_PLANEJAMENTO 
-						 ,CD_OFERTA ,MATRICULA_DO_VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT)
-
-
-				EXEC [dbo].[SP_PC_CG_IND_Acompanhamento_Diario_Final] @ANOMES
-
-				-----------------------------------------------------------------------------------------
-				-------------------- REGISTRO DE FIM DE EXECUÇÃO -----------------------------
-				-----------------------------------------------------------------------------------------
-				INSERT INTO TBL_PC_TEMPO_PROCEDURES
-				SELECT
-				'SP_PC_NOVA_FIBRA' AS [PROCEDURE],
-				'FIM' AS INI_FIM,
-				GETDATE() AS DATA_HORA
-				'''
-
+def executa_procedure_sql_simples():
+	
 	dados_conexao = (
 		"Driver={SQL Server};"
 		f"Server={segredos.db_server};"
@@ -361,340 +161,58 @@ def tira_comentario_procedure_nova_fibra_sql():
 		f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
-	print("Conectado ao banco para alterar a procedure - retirar comentários")
+	print("Conectado ao banco para executar PROCEDURE")
+
 	cursor = conexao.cursor()
-	cursor.execute(comando_sql)
+	
+	#executar procedure
+	procedure = 'SP_PC_NOVA_FIBRA_COM_TENDENCIA'
+	dh_inicio_proc = datetime.today().strftime('%Y%m%d %H:%M:%S')
+	print(f'Hora inicio execução procedure: {dh_inicio_proc}')
+	cursor.execute('SET NOCOUNT ON; EXEC SP_PC_NOVA_FIBRA_COM_TENDENCIA')
 	conexao.commit()
+
+	############# LOOP PARA VERIFICAR FIM DA PROCEDURE #############
+	def verifica_fim_procedure (procedure, dh_inicio_proc):
+		tentativas = 1
+		dh_fim_proc = dh_inicio_proc
+
+		dados_conexao = (
+			"Driver={SQL Server};"
+			f"Server={segredos.db_server};"
+			f"Database={segredos.db_name};"
+			f"UID={segredos.db_user};"
+			f"PWD={segredos.db_pass}"
+		)
+		conn = pyodbc.connect(dados_conexao)
+		cursor = conn.cursor()
+		comando_sql = f"SELECT max(DATA_HORA) as DATA_HORA FROM TBL_PC_TEMPO_PROCEDURES WHERE [PROCEDURE] = '{procedure}' AND INI_FIM = 'FIM'"
+		
+		while dh_fim_proc <= dh_inicio_proc:
+	
+			print(f'Aguardando Fim da procedure. Tentativa: {tentativas}')
+			cursor.execute(comando_sql)
+			row = cursor.fetchone()
+			dh_fim_proc = row.DATA_HORA.strftime('%Y%m%d %H:%M:%S')
+
+			print(f'Hora fim da execução da procedure: {dh_fim_proc}')
+
+			if (dh_fim_proc > dh_inicio_proc):
+				print('Procedure concluida. Continuando...')
+				conn.close()
+				return
+			
+			print('Procedure não concluida. Esperar mais 1 min')
+			time.sleep(60)
+			tentativas = tentativas + 1
+		return
+	
+	
+	verifica_fim_procedure(procedure, dh_inicio_proc)
+	############# FIM DO LOOP PARA VERIFICAR FIM DA PROCEDURE #############
+	
 	conexao.close()
-	print('Conexão Fechada')
-
-def coloca_comentario_procedure_nova_fibra_sql():
-	comando_sql='''
-				ALTER PROCEDURE [dbo].[SP_PC_NOVA_FIBRA] AS
-
-				DECLARE @ANOMES AS VARCHAR(6)
-				SET @ANOMES = (SELECT DISTINCT DBO.FORMAT_DATE(DT_MES,'YYYYMM') FROM TBL_CG_NOVA_FIBRA_VL)
-
-				-----------------------------------------------------------------------------------------
-				-------------------- REGISTRO DE INICIO DE EXECUÇÃO -----------------------------
-				-----------------------------------------------------------------------------------------
-				INSERT INTO TBL_PC_TEMPO_PROCEDURES
-				SELECT
-				'SP_PC_NOVA_FIBRA' AS [PROCEDURE],
-				'INICIO' AS INI_FIM,
-				GETDATE() AS DATA_HORA
-
-				-----------------------------------------------------------------------------------------
-				-------------------- INSERE VALORES NA TABELA DE NOVA FIBRA -----------------------------
-				-----------------------------------------------------------------------------------------
-				
-
-
-				DELETE FROM TBL_RE_BASE_NOVA_FIBRA WHERE ANOMES = @ANOMES AND TIPO_INDICADOR = 'REAL'
-
-				INSERT INTO TBL_RE_BASE_NOVA_FIBRA
-
-				SELECT /*DISTINCT*/ 'VL' AS INDBD ,DBO.FORMAT_DATE(DT_ENVIO_PEDIDO,'YYYYMM') AS ANOMES ,dbo.fn_Remover_Acentos(NO_MUNICIPIO) AS NO_MUNICIPIO ,NU_FILIAL ,LEFT(DT_ENVIO_PEDIDO,10) AS DATA ,NO_CANAL_PLANEJAMENTO ,NO_VELOCIDADE
-								,NO_CLASSE_PRODUTO ,1 AS VALOR ,DS_SITUACAO_ORDEM ,NO_TIPO_MEIO_PAGAMENTO ,CD_PDV_SAP ,CD_OFERTA ,NO_OFERTA ,DT_ULTIMA_MODIFICACAO ,VL_TOTAL_RECORRENTE_OFERTA
-								,MATRICULA_DO_VENDEDOR ,'REAL' AS TIPO_INDICADOR ,'VAREJO' AS SEGMENTO
-
-				-- 07.06.22 RETIRADO O DISTINCT DA QUERY POIS FOI IDENTIFICADO QUE ESTAVAM EXPURGANDO VENDAS QUE NÃO DEVERIAM SER EXPURGADAS
-
-				FROM TBL_CG_NOVA_FIBRA_VL
-
-				WHERE IN_TESTE = '0' AND IN_BSIM = '0' AND DBO.FORMAT_DATE(DT_ENVIO_PEDIDO,'YYYYMMDD') <> DBO.FORMAT_DATE(GETDATE(),'YYYYMMDD') 
-
-				UNION ALL
-
-				SELECT /*DISTINCT*/ 'GROSS' AS INDBD ,DBO.FORMAT_DATE(DT_ATIVACAO,'YYYYMM') AS ANOMES ,dbo.fn_Remover_Acentos(NO_MUNICIPIO) AS NO_MUNICIPIO ,NU_FILIAL ,LEFT(DT_ATIVACAO,10) AS DATA ,NO_CANAL_PLANEJAMENTO ,NO_VELOCIDADE
-								,NO_CLASSE_PRODUTO ,1 AS VALOR ,DS_SITUACAO_ORDEM ,NO_TIPO_MEIO_PAGAMENTO ,CD_PDV_SAP ,CD_OFERTA ,NO_OFERTA ,DT_ULTIMA_MODIFICACAO ,VL_TOTAL_RECORRENTE_OFERTA
-								,MATRICULA_DO_VENDEDOR ,'REAL' AS TIPO_INDICADOR ,'VAREJO' AS SEGMENTO
-
-				-- 07.06.22 RETIRADO O DISTINCT DA QUERY POIS FOI IDENTIFICADO QUE ESTAVAM EXPURGANDO VENDAS QUE NÃO DEVERIAM SER EXPURGADAS
-
-				FROM TBL_CG_NOVA_FIBRA_GROSS
-
-				WHERE IN_TESTE = '0' AND IN_BSIM = '0' AND DBO.FORMAT_DATE(DT_ATIVACAO,'YYYYMMDD') <> DBO.FORMAT_DATE(GETDATE(),'YYYYMMDD') 
-
-				-- COMENTAR PARA NÃO MUDAR A TENDÊNCIA NAS CARGAS DAS PARCIAIS ....
-				/*
-				----------------------------------------------
-				------EXECUTA CÁLCULO DE TENDÊNCIA (VLL)------
-				----------------------------------------------
-
-				EXEC sp_pc_tend_nova_fibra
-
-				----------------------------------------------------------------------------------
-				-----------------INÍCIO PROCESSO DE INSERÇÃO DA TENDÊNCIA-------------------------
-				----------------------------------------------------------------------------------
-
-				declare @MAIOR_DATA INTEGER
-				declare @MAIOR_DATA_MES INTEGER
-
-					select
-							@MAIOR_DATA_MES = CONVERT(VARCHAR(8),DateAdd(Day,-1,Dateadd(Month,1, Convert(char(08),CONVERT(date, max(DATA)), 126)+'01')),112)
-						  from TBL_RE_BaseResultadoDiario
-						  WHERE LEFT(DATA,6) = @ANOMES AND GRUPO_PLANO = 'NOVA FIBRA' AND INDBD = 'VL'
-
-					select
-							@MAIOR_DATA = DBO.FORMAT_DATE(MAX(DATA),'YYYYMMDD')
-						  from TBL_RE_BASE_NOVA_FIBRA
-						  WHERE ANOMES = @ANOMES AND INDBD = 'VL' AND TIPO_INDICADOR = 'REAL'
-
-
-					PRINT '-----------------------------------------------------------------------------------------'
-					PRINT '-			INSERINDO TENDÊNCIA NAS TABELAS RE_RESULTADOS   MÊS: '+@ANOMES
-					PRINT '-----------------------------------------------------------------------------------------'
-
-					PRINT '-----------------------------------------------------------------------------------------'
-					PRINT '-			VAREJO'
-					PRINT '-----------------------------------------------------------------------------------------'
-
-				--------------------------------
-				--DROP/CREATE TABELA DE FATOR
-				--------------------------------
-
-				IF OBJECT_ID('TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA', 'U') IS NOT NULL
-				DROP TABLE TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA
-
-
-				SELECT * into TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA
-
-				 FROM (
-				
-				SELECT DISTINCT B.NO_CANAL_PLANEJAMENTO,
-								B.NU_FILIAL,
-								B.NO_MUNICIPIO,
-								CASE WHEN ((C.CANAL_RB IS NULL) OR (C.CANAL_RB IN ('S2S', 'Outros', 'TLV Outros'))) THEN 'Outros Nacionais'
-								ELSE C.CANAL_RB END AS CANAL_RB
-				FROM TBL_RE_BASE_NOVA_FIBRA AS B
-				LEFT JOIN TBL_RE_DP_CanaisRelatorioBernardo AS C ON B.NO_CANAL_PLANEJAMENTO = C.CANAL_FINAL
-				WHERE ANOMES = @ANOMES AND INDBD = 'VL' ) A
-
-				LEFT JOIN (
-				
-				SELECT filial, municipio, canal, SUM(TEND)/sum(realizado) as fator FROM (
-				
-				SELECT data, dia_semana, filial, municipio, canal, qtd as tend,
-					   case when realizado = 1 then qtd end as realizado
-					   FROM tbl_pc_tend_nova_fibra ) TEND_NF group by filial, municipio, canal ) F
-
-					ON A.CANAL_RB = F.canal AND
-					   A.NU_FILIAL = F.filial AND
-					   A.NO_MUNICIPIO = F.municipio
-
-				------------------------------------------------------------------
-				--IGUALANDO TENDÊNCIA AO REALIZADO NO CASO DE MÊS FECHADO
-				------------------------------------------------------------------
-
-					IF @MAIOR_DATA = @MAIOR_DATA_MES
-						BEGIN
-							UPDATE TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA SET FATOR = 1
-							PRINT '----------------TENDÊNCIA IGUALADA AO REALIZADO----------------'
-						END
-
-				-------------------------------------
-				--INSERT NA TBL_RE_BASE_NOVA_FIBRA
-				-------------------------------------
-
-				DELETE FROM [dbo].[TBL_RE_BASE_NOVA_FIBRA]
-					WHERE TIPO_INDICADOR = 'TENDÊNCIA' AND ANOMES = @ANOMES
-					AND INDBD = 'VL' AND SEGMENTO = 'VAREJO'
-
-				INSERT INTO [dbo].[TBL_RE_BASE_NOVA_FIBRA]
-						   ([INDBD]
-							,[ANOMES]
-							,[NO_MUNICIPIO]
-							,[NU_FILIAL]
-							,[DATA]
-							,[NO_CANAL_PLANEJAMENTO]
-							,[NO_VELOCIDADE]
-							,[NO_CLASSE_PRODUTO]
-							,[VALOR]
-							,[DS_SITUACAO_ORDEM]
-							,[NO_TIPO_MEIO_PAGAMENTO]
-							,[CD_PDV_SAP]
-							,[CD_OFERTA]
-							,[NO_OFERTA]
-							,[DT_ULTIMA_MODIFICACAO]
-							,[vl_total_recorrente_oferta]
-							,[matricula_do_vendedor]
-							,[TIPO_INDICADOR]
-							,[SEGMENTO]
-							)
-					SELECT 
-							[INDBD]
-							,[ANOMES]
-							,A.[NO_MUNICIPIO]
-							,A.[NU_FILIAL]
-							,[DATA]
-							,A.[NO_CANAL_PLANEJAMENTO]
-							,[NO_VELOCIDADE]
-							,[NO_CLASSE_PRODUTO]
-							,ISNULL((A.VALOR * F.fator),A.VALOR) AS [VALOR]
-							,[DS_SITUACAO_ORDEM]
-							,[NO_TIPO_MEIO_PAGAMENTO]
-							,[CD_PDV_SAP]
-							,[CD_OFERTA]
-							,[NO_OFERTA]
-							,[DT_ULTIMA_MODIFICACAO]
-							,[vl_total_recorrente_oferta]
-							,[matricula_do_vendedor]
-							,'TENDÊNCIA' AS [TIPO_INDICADOR]
-							,[SEGMENTO]
-					FROM [dbo].[TBL_RE_BASE_NOVA_FIBRA] A
-					LEFT JOIN TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA F ON
-					   A.NO_CANAL_PLANEJAMENTO = F.NO_CANAL_PLANEJAMENTO AND
-					   A.NU_FILIAL = F.filial AND
-					   A.NO_MUNICIPIO = F.municipio
-					WHERE TIPO_INDICADOR = 'REAL' AND ANOMES = @ANOMES
-						AND INDBD = 'VL' AND SEGMENTO = 'VAREJO'
-
-				---------------------------------------
-				--DROP TABELA TEMPORÁRIA DE FATOR
-				---------------------------------------
-
-				IF OBJECT_ID('TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA', 'U') IS NOT NULL
-				DROP TABLE TBL_PC_TEMP_FATOR_VAR_NOVA_TEND_FIBRA
-
-				----------------------------------------------------------------------------------
-				-------------------FIM PROCESSO DE INSERÇÃO DA TENDÊNCIA--------------------------
-				----------------------------------------------------------------------------------
-				*/
-				-----------------------------------------------------------------------------------------
-				--- INSERE VALORES NA BASE RESULTADOS - ADICIONADO POR NATÁLIA MOREIRA EM 30/11/2021 ----
-				----------------------------------------------------------------------------------------- 
-
-				DELETE  FROM TBL_RE_BASERESULTADOS
-				WHERE  DATA = @ANOMES AND TIPO_INDICADOR IN ('REAL','TENDÊNCIA') AND GRUPO_PLANO = 'NOVA FIBRA'
-
-				INSERT INTO TBL_RE_BASERESULTADOS
-
-				SELECT INDBD , TIPO_INDICADOR ,ANOMES AS DATA ,NO_CANAL_PLANEJAMENTO AS CANAL_BOV ,NO_CANAL_PLANEJAMENTO AS CANAL_PARA ,CD_PDV_SAP AS COD_SAP ,NU_FILIAL AS FILIAL 
-					   ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END AS DDD ,'NOVA FIBRA' AS GRUPO_PLANO ,'' AS PLANO ,'VA' AS SEGMENTO ,'FIBRA' AS PACOTE ,SUM(VALOR) AS VALOR 
-					   ,NO_CANAL_PLANEJAMENTO AS CANAL_FINAL ,CD_OFERTA AS CAMPANHA ,'NA' HL ,MATRICULA_DO_VENDEDOR AS VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT) AS ARPU 
-					   ,'' AS PLANO_GERENCIAL ,'NI' AS ZONA_COMPETICAO ,'' AS PLANO_OFERTA ,'' AS PORTABILIDADE ,'' AS MULTIPRODUTO ,'ALONE' AS IND_COMBO ,'N' AS PEDIDO_UNICO
-
-				FROM TBL_RE_BASE_NOVA_FIBRA A
-
-				LEFT JOIN TBL_RE_DP_MUNICIPIO_DDD B
-				ON A.NU_FILIAL = B.UF AND A.NO_MUNICIPIO = B.CIDADE
-
-				LEFT JOIN TBL_RE_DP_FILIAL_DDD C
-				ON A.NU_FILIAL = C.UF
-
-				WHERE ANOMES = @ANOMES AND
-					  SEGMENTO = 'VAREJO' AND
-					  TIPO_INDICADOR IN ('REAL', 'TENDÊNCIA')
-
-				GROUP BY INDBD ,TIPO_INDICADOR, ANOMES ,NO_CANAL_PLANEJAMENTO ,NO_CANAL_PLANEJAMENTO ,CD_PDV_SAP ,NU_FILIAL ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END ,NO_CANAL_PLANEJAMENTO ,CD_OFERTA 
-						 ,MATRICULA_DO_VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT)
-
-
-				---------------------- INSERE O REAL COMO TENDÊNCIA (PARA O GROSS) --------------------------------------
-				/*
-				INSERT INTO TBL_RE_BASERESULTADOS 
-
-				SELECT INDBD ,'TENDÊNCIA' AS TIPO_INDICADOR ,ANOMES AS DATA ,NO_CANAL_PLANEJAMENTO AS CANAL_BOV ,NO_CANAL_PLANEJAMENTO AS CANAL_PARA ,CD_PDV_SAP AS COD_SAP ,NU_FILIAL AS FILIAL 
-					   ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END AS DDD ,'NOVA FIBRA' AS GRUPO_PLANO ,'' AS PLANO ,'VA' AS SEGMENTO ,'FIBRA' AS PACOTE ,SUM(VALOR) AS VALOR 
-					   ,NO_CANAL_PLANEJAMENTO AS CANAL_FINAL ,CD_OFERTA AS CAMPANHA ,'NA' HL ,MATRICULA_DO_VENDEDOR AS VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT) AS ARPU 
-					   ,'' AS PLANO_GERENCIAL ,'NI' AS ZONA_COMPETICAO ,'' AS PLANO_OFERTA ,'' AS PORTABILIDADE ,'' AS MULTIPRODUTO ,'ALONE' AS IND_COMBO ,'N' AS PEDIDO_UNICO
-
-				FROM TBL_RE_BASE_NOVA_FIBRA A
-
-				LEFT JOIN TBL_RE_DP_MUNICIPIO_DDD B
-				ON A.NU_FILIAL = B.UF AND A.NO_MUNICIPIO = B.CIDADE
-
-				LEFT JOIN TBL_RE_DP_FILIAL_DDD C
-				ON A.NU_FILIAL = C.UF
-
-				WHERE ANOMES = @ANOMES AND
-					  SEGMENTO = 'VAREJO' AND
-					  TIPO_INDICADOR IN ('REAL') AND
-					  INDBD = 'GROSS'
-
-				GROUP BY INDBD ,ANOMES ,NO_CANAL_PLANEJAMENTO ,NO_CANAL_PLANEJAMENTO ,CD_PDV_SAP ,NU_FILIAL ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END ,NO_CANAL_PLANEJAMENTO ,CD_OFERTA 
-						 ,MATRICULA_DO_VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT)*/
-
-				---------------------- INSERE VALORES NA BASE DIÁRIA -------------------------------------
-
-				DELETE FROM DBO.TBL_RE_BASERESULTADODIARIO
-				WHERE  LEFT(DATA,6) = @ANOMES AND GRUPO_PLANO = 'NOVA FIBRA'
-
-				INSERT INTO TBL_RE_BASERESULTADODIARIO 
-
-				SELECT INDBD ,REPLACE(DATA,'-','') AS DATA ,NO_CANAL_PLANEJAMENTO AS CANAL_BOV ,NO_CANAL_PLANEJAMENTO AS CANAL_PARA ,'' AS REGIONAL ,NU_FILIAL AS FILIAL 
-					   ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END AS DDD ,CD_PDV_SAP AS COD_SAP ,'NOVA FIBRA' AS GRUPO_PLANO ,'' AS PLANO ,SUM(VALOR) AS QTD ,NO_CANAL_PLANEJAMENTO AS CANAL_FINAL 
-					   ,'FIBRA' AS PACOTE ,CD_OFERTA AS CAMPANHA ,'NA' AS HL ,MATRICULA_DO_VENDEDOR AS VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT) AS ARPU 
-					   ,'' AS PLANO_GERENCIAL ,'NI' AS ZONA_COMPETICAO ,'' AS PORTABILIDADE ,'ALONE' AS IND_COMBO ,'N' AS PEDIDO_UNICO
-
-				FROM TBL_RE_BASE_NOVA_FIBRA A
-
-				LEFT JOIN TBL_RE_DP_MUNICIPIO_DDD B
-				ON A.NU_FILIAL = B.UF AND A.NO_MUNICIPIO = B.CIDADE
-
-				LEFT JOIN TBL_RE_DP_FILIAL_DDD C
-				ON A.NU_FILIAL = C.UF
-
-				WHERE ANOMES = @ANOMES AND TIPO_INDICADOR = 'REAL'
-
-				GROUP BY INDBD ,REPLACE(DATA,'-','') ,NO_CANAL_PLANEJAMENTO ,NO_CANAL_PLANEJAMENTO ,NU_FILIAL ,CASE WHEN B.DDD IS NULL THEN C.DDD ELSE B.DDD END ,CD_PDV_SAP ,NO_CANAL_PLANEJAMENTO 
-						 ,CD_OFERTA ,MATRICULA_DO_VENDEDOR ,CAST(VL_TOTAL_RECORRENTE_OFERTA AS FLOAT)
-
-
-				EXEC [dbo].[SP_PC_CG_IND_Acompanhamento_Diario_Final] @ANOMES
-
-				-----------------------------------------------------------------------------------------
-				-------------------- REGISTRO DE INICIO DE EXECUÇÃO -----------------------------
-				-----------------------------------------------------------------------------------------
-				INSERT INTO TBL_PC_TEMPO_PROCEDURES
-				SELECT
-				'SP_PC_NOVA_FIBRA' AS [PROCEDURE],
-				'FIM' AS INI_FIM,
-				GETDATE() AS DATA_HORA
-
-				'''
-
-	dados_conexao = (
-		"Driver={SQL Server};"
-		f"Server={segredos.db_server};"
-		f"Database={segredos.db_name};"
-		f"UID={segredos.db_user};"
-		f"PWD={segredos.db_pass}"
-	)
-	conexao = pyodbc.connect(dados_conexao)
-	print("Conectado ao banco para alterar a procedure - colocar comentários")
-	cursor = conexao.cursor()
-	cursor.execute(comando_sql)
-	conexao.commit()
-	conexao.close()
-	print('Conexão Fechada')
-
-def executa_procedure_sql(nome_procedure, param):
-   
-    dados_conexao = (
-        "Driver={SQL Server};"
-        f"Server={segredos.db_server};"
-        f"Database={segredos.db_name};"
-        f"UID={segredos.db_user};"
-        f"PWD={segredos.db_pass}"
-    )
-    conexao = pyodbc.connect(dados_conexao)
-    print('\x1b[1;33;42m' + 'Conexão realizada ao banco de dados' + '\x1b[0m')
-
-    cursor = conexao.cursor()
-    
-    #executa procedure
-    inicio_procedure = datetime.today()
-    print('\x1b[1;33;44m' + f'Executando a Procedure {nome_procedure} para o parâmetro: {param} '+ '\x1b[0m')
-    print(f'Iniciando execução em: {inicio_procedure}')
-    cursor.execute(f'SET NOCOUNT ON; EXEC {nome_procedure}  {param}')
-    conexao.commit()
-    fim_procedure = datetime.today()
-    print(f"Procedure executada em {fim_procedure - inicio_procedure} tempo")
-    
-    conexao.close()
-    print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
+	print('Conexão da PROCEDURE Fechada')
 
 def montaExcelTendVll():
 	comando_sql = '''SELECT DATA,
@@ -752,6 +270,32 @@ def enviaEmaileAnexo():
 
 	email.Send()
 	print("Email Enviado")
+
+def executa_procedure_sql(nome_procedure, param):
+  
+    dados_conexao = (
+        "Driver={SQL Server};"
+        f"Server={segredos.db_server};"
+        f"Database={segredos.db_name};"
+        f"UID={segredos.db_user};"
+        f"PWD={segredos.db_pass}"
+    )
+    conexao = pyodbc.connect(dados_conexao)
+    print('\x1b[1;33;42m' + 'Conexão realizada ao banco de dados' + '\x1b[0m')
+
+    cursor = conexao.cursor()
+    
+    #executa procedure
+    inicio_procedure = datetime.today()
+    print('\x1b[1;33;44m' + f'Executando a Procedure {nome_procedure} para o parâmetro: {param} '+ '\x1b[0m')
+    print(f'Iniciando execução em: {inicio_procedure}')
+    cursor.execute(f'SET NOCOUNT ON; EXEC {nome_procedure}  {param}')
+    conexao.commit()
+    fim_procedure = datetime.today()
+    print(f"Procedure executada em {fim_procedure - inicio_procedure} tempo")
+    
+    conexao.close()
+    print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
 
 def ATIVAR_TEND_TABLEAU_teste_Jan22():
 	comando_sql='''
@@ -1856,95 +1400,82 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
 	conexao.close()
 	print('Conexão Fechada')
 
-def menu():
-    print('----------------- Menu de Automacao de Atividades -----------------')
-    print('')
-    print('1) Verificar as datas no MONITOR DE CARGA e Demonstrativo do Gross')
-    print('2) Copiar o Demonstrativo do Gross e montar tabela dinâmica')
-    print('3) Executar processo da Nova Fibra')
-    print('4) Executar procedures para o Legado')
-    print('5) Procedures Finais - usar depois de atualizar a tendência manualmente')
-    print('6) Procedures Receita Contratada')
-    print('')
-    selecionada =  input(('Selecione uma das opções acima: #'))
-    print(f'A opção selecionda foi: {selecionada}')
-    return selecionada
-
+def atualiza_TB_VALIDA_CARGA_TENDENCIA():
+	comando_sql='update TB_VALIDA_CARGA_TENDENCIA set DATA_CARGA = convert(varchar, getdate(), 120 )'
+	dados_conexao = (
+		"Driver={SQL Server};"
+		f"Server={segredos.db_server};"
+		f"Database={segredos.db_name};"
+		f"UID={segredos.db_user};"
+		f"PWD={segredos.db_pass}"
+	)
+	conexao = pyodbc.connect(dados_conexao)
+	print("Conectado ao banco para dar update")
+	cursor = conexao.cursor()
+	cursor.execute(comando_sql)
+	conexao.commit()
+	conexao.close()
+	print('Conexão Fechada')
 
 
 param = datetime.today().strftime('%Y%m')
+opcaoSelecionada = 0
+while opcaoSelecionada != 8:
+	opcaoSelecionada = menu()
+	if opcaoSelecionada == '1':
+		print('Iniciando a verificação de datas...')
+		puxa_dts_cargas('n')
+		a = input('Tecle qualquer tecla para continuar...')
 
-opcaoSelecionada = menu()
-if opcaoSelecionada == '1':
-    print('Iniciando a verificação de datas...')
-   
-    fim = puxa_dts_cargas()
-    BOV_1058 = (f'{fim["BOV_1058.TXT"].split(" ")[0]}')
-    BOV_1059 = (f'{fim["BOV_1059.TXT"].split(" ")[0]}')
-    BOV_1064 = (f'{fim["BOV_1064.TXT"].split(" ")[0]}')
-    BOV_1065 = (f'{fim["BOV_1065.TXT"].split(" ")[0]}')
-    BOV_1066 = (f'{fim["BOV_1066.TXT"].split(" ")[0]}')
-    BOV_1067 = (f'{fim["BOV_1067.TXT"].split(" ")[0]}')
-    BOV_6162 = (f'{fim["HADOOP_6162.TXT"].split(" ")[0]}')
-    BOV_6163 = (f'{fim["HADOOP_6163.TXT"].split(" ")[0]}')
+	elif opcaoSelecionada == '2':
+		print('Opção 2...')
+		copia_arquivo_renomeia()
+		monta_tabdin_demonstrativo_gross()
+		a = input('Tecle qualquer tecla para continuar...')
 
-    data_mod = data_mod_arquivo('Y:\Demonstrativo Gross.xlsb')
-    print(f'HOJE               : {hoje}')
-    print(f'Demonstrativo Gross: {data_mod}')
-    
-    print(f'BOV_1058           : {BOV_1058}')
-    print(f'BOV_1059           : {BOV_1059}')
-    print(f'BOV_1064           : {BOV_1064}')
-    print(f'BOV_1065           : {BOV_1065}')
-    print(f'BOV_1066           : {BOV_1066}')
-    print(f'BOV_1067           : {BOV_1067}')
-    print(f'BOV_6162           : {BOV_6162}')
-    print(f'BOV_6163           : {BOV_6163}')
-elif opcaoSelecionada == '2':
-    if data_mod != hoje:
-        ConfirmaContinuar = input('Data do arquivo diferente da data de hoje. Deseja continuar? (S/N):')
-        if ConfirmaContinuar == 'N' or ConfirmaContinuar == 'n':
-            print('SAIR')
-        elif  ConfirmaContinuar == 'S' or ConfirmaContinuar == 's':
-            copia_arquivo_renomeia()
-            monta_tabdin_demonstrativo_gross()
-        else:
-            print('Opção inválida')
-    elif data_mod == hoje:
-        copia_arquivo_renomeia()
-        monta_tabdin_demonstrativo_gross()
+	elif opcaoSelecionada == '3':
+		print('Opção 3...')
+		executa_procedure_sql_simples()
+		montaExcelTendVll()
+		enviaEmaileAnexo()
+		a = input('Tecle qualquer tecla para continuar...')
 
+	elif opcaoSelecionada == '4':
+		print('Opção 4...')
+		param = datetime.today().strftime('%Y%m')
+		executa_procedure_sql('SP_PC_Insert_Tendencia_Auto_Fibra',param)
+		a = input('Tecle qualquer tecla para continuar...')
 
-elif opcaoSelecionada == '3':
+	elif opcaoSelecionada == '5':
+		print('Opção 5...')
+		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_FIBRA_EMPRESARIAL',param)
+		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_FIBRA_VAREJO',param)
+		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_NOVA_FIBRA',param)
+		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_TABELAS_FIBRA',param)
+		a = input('Tecle qualquer tecla para continuar...')
 
-    print('\x1b[1;33;44m' + 'Alterando a Procedure SP_PC_NOVA_FIBRA - descomentando o bloco de tendência'+ '\x1b[0m')
-    tira_comentario_procedure_nova_fibra_sql()
-    
-    print('\x1b[1;33;44m' + 'Executando a Procedure SP_PC_NOVA_FIBRA'+ '\x1b[0m')
-    executa_procedure_sql('SP_PC_NOVA_FIBRA', param)	
-    
-    print('\x1b[1;33;44m' + 'Alterando a Procedure SP_PC_NOVA_FIBRA - comentando o bloco de tendência'+ '\x1b[0m')
-    coloca_comentario_procedure_nova_fibra_sql()
-    
-    print('\x1b[1;33;44m' + 'Montando Excel com tabela dinamica e salvando na rede'+ '\x1b[0m')
-    montaExcelTendVll()
-    
-    print('\x1b[1;33;44m' + 'Enviando e-mail'+ '\x1b[0m')
-    enviaEmaileAnexo()
-    
-    print('\x1b[1;32;41m' + 'CONCLUIDO' + '\x1b[0m')
-elif opcaoSelecionada == '4':
-    executa_procedure_sql('SP_PC_Insert_Tendencia_Auto_Fibra',param)
-    print('Concluido. Continue o processo no excel para calcular a tendência de VL e VLL da Fibra Legado.')
-elif opcaoSelecionada == '5':
-    ATIVAR_TEND_TABLEAU_teste_Jan22()
-    executa_procedure_sql('SP_PC_BASES_SHAREPOINT',param)
-    ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
-elif opcaoSelecionada == '6':
-    executa_procedure_sql('SP_PC_Update_Ticket_Fibra_VAREJO_Tendencia_porRegiao', param)
-    executa_procedure_sql('SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo', param)
-    executa_procedure_sql('SP_PC_TBL_RE_RELATORIO_RC_V2_TEND', param)
-else:
-    print('Opção Inválida')
+	elif opcaoSelecionada == '6':
+		print('Opção 6...')
+		ATIVAR_TEND_TABLEAU_teste_Jan22()
+		executa_procedure_sql('SP_PC_BASES_SHAREPOINT',param)
+		ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
+		#atualiza_TB_VALIDA_CARGA_TENDENCIA()
+		a = input('Tecle qualquer tecla para continuar...')
+
+	elif opcaoSelecionada == '7':
+		print('Opção 7...')
+		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_Tendencia_porRegiao'
+		executa_procedure_sql(proc, param)
+		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
+		executa_procedure_sql(proc, param)
+		proc = 'SP_PC_TBL_RE_RELATORIO_RC_V2_TEND'
+		executa_procedure_sql(proc, param)
+		a = input('Tecle qualquer tecla para continuar...')
+
+	elif opcaoSelecionada == '8':
+		print('Opção 8...')
+		break
+	else:
+		print('Opção Inválida')
 
 print('FIM')
