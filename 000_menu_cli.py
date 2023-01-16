@@ -44,6 +44,7 @@ def data_mod_arquivo():
 	return (modificado)
 
 def puxa_dts_cargas(em_loop):
+#FIXME considerar a coluna PROJETO quando verificar as datas. A mesma base é baixada mais de uma vez para projetos diferentes - causando erro na leitura
 	dicio = {"arquivo":"data","HOJE":hoje}
 	with sync_playwright() as p:
 
@@ -537,7 +538,7 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22():
                             CASE WHEN A.grupo_plano IN ('OI GALERA PRÉ', 'PRÉ-PAGO') THEN 'PRÉ-PAGO' ELSE A.grupo_plano END GRUPO_PLANO,
                             A.canal_rb CANAL, 
                             REG.REGIONAL_AGRUPADA REGIONAL,
-                            SEGMENTO,
+                            A.SEGMENTO,
                             LTRIM(RTRIM(A.FILIAL)) UF,
                             RIGHT(C.ANOMESDIA,2) AS DIA,
                             case 
@@ -555,20 +556,32 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22():
 
                     /* TOTAL DU POR REGIONAL - CANAL */
                     left JOIN (
-                                    SELECT 
-                                        * 
-                                    FROM TBL_IND_VAR_DU_SUMARIZADO
-                                    where ANOMES = @ANOMES
-                            ) DU_MES ON A.INDBD = DU_MES.INDBD AND 
-                                                        --a.GRUPO_PLANO = DU_MES.PRODUTO_NOVO AND
-                                                        case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = DU_MES.PRODUTO_NOVO AND
-                                                        CASE WHEN A.CANAL_RB = 'Smart Message' THEN 'TLV Outros' 
-                                                        ELSE A.CANAL_RB END = DU_MES.CANAL AND
-                                                        A.REGIONAL = DU_MES.REGIONAL AND
-                                                        A.DATA = DU_MES.ANOMES
+                                   -- SELECT 
+                                   --     * 
+                                   -- FROM TBL_IND_VAR_DU_SUMARIZADO
+                                   --where ANOMES = @ANOMES
+								   /* --------------- ALTERADO EM 11/01/2023 -----------------------*/
+								   SELECT
+										INDBD,
+										ANOMES,
+										PRODUTO AS PRODUTO_NOVO,
+										SEGMENTO,
+										SUM(DU) AS VALOR
+								   FROM TBL_PC_DU_PRODUTO_SEGMENTO
+								   where ANOMES = @ANOMES
+								   GROUP BY INDBD,ANOMES, PRODUTO,SEGMENTO
+
+                            ) DU_MES ON A.INDBD = DU_MES.INDBD
+                                        --a.GRUPO_PLANO = DU_MES.PRODUTO_NOVO AND
+                                        --case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = DU_MES.PRODUTO_NOVO AND
+                                        AND A.grupo_plano = DU_MES.PRODUTO_NOVO
+										--AND CASE WHEN A.CANAL_RB = 'Smart Message' THEN 'TLV Outros' ELSE A.CANAL_RB END = DU_MES.CANAL 
+										--AND A.REGIONAL = DU_MES.REGIONAL 
+										AND A.DATA = DU_MES.ANOMES
+										AND CASE WHEN A.SEGMENTO IN ('EMP CLI','EMP PDV') THEN 'EMPRESARIAL' ELSE A.SEGMENTO END = DU_MES.SEGMENTO
 
                     /* DU POR DIA PARA REGIONAL - CANAL */
-                    left JOIN (SELECT ANOMESDIA,
+                    left JOIN (/*SELECT ANOMESDIA,
                                     left(ANOMESDIA,6) ANOMES,
                                     INDBD,
                                     CASE WHEN DU_DIA.PRODUTO IN ('OI GALERA PRÉ', 'PRÉ-PAGO') THEN 'PRÉ-PAGO' ELSE DU_DIA.PRODUTO END PRODUTO_NOVO,
@@ -576,18 +589,41 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22():
                                     REGIONAL,
                                     valor
                                 FROM TBL_pc_du AS DU_DIA
-                                            where left(ANOMESDIA,6) = @ANOMES
+                                            where left(ANOMESDIA,6) = @ANOMES*/
+								SELECT
+										ANOMESDIA,
+										INDBD,
+										ANOMES,
+										PRODUTO AS PRODUTO_NOVO,
+										SEGMENTO,
+										SUM(DU) AS VALOR
+								   FROM TBL_PC_DU_PRODUTO_SEGMENTO
+								   where ANOMES = @ANOMES
+								   GROUP BY ANOMESDIA,INDBD,ANOMES, PRODUTO,SEGMENTO
+
                                 ) C ON 
                                         A.INDBD = C.INDBD AND 
-                                        case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = C.PRODUTO_NOVO AND
-                                        CASE WHEN A.CANAL_RB = 'Smart Message' THEN 'TLV Outros' ELSE
-                                        A.CANAL_RB END = C.CANAL AND
-                                        A.REGIONAL = C.REGIONAL and
-                                        A.DATA = C.ANOMES
-                    
+                                        A.grupo_plano = C.PRODUTO_NOVO AND
+										--case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = C.PRODUTO_NOVO AND
+                                        --CASE WHEN A.CANAL_RB = 'Smart Message' THEN 'TLV Outros' ELSE A.CANAL_RB END = C.CANAL AND
+                                        --A.REGIONAL = C.REGIONAL and
+                                        CASE WHEN A.SEGMENTO IN ('EMP CLI','EMP PDV') THEN 'EMPRESARIAL' ELSE A.SEGMENTO END = C.SEGMENTO and
+										A.DATA = C.ANOMES
                     /* TOTAL DU POR PRODUTOS */
-                    left JOIN (
-                                    SELECT 
+                    left JOIN ( SELECT 
+                                            ANOMES,
+                                            INDBD,
+                                            PRODUTO,
+											SEGMENTO,
+                                            SUM(DU) VALOR
+                                    FROM TBL_PC_DU_PRODUTO_SEGMENTO
+                                    where ANOMES = @ANOMES
+                                    group by 
+                                            ANOMES,
+                                            INDBD,
+                                            PRODUTO,
+											SEGMENTO
+								  /*  SELECT 
                                             LEFT(ANOMESDIA,6) ANOMES,
                                             INDBD,
                                             PRODUTO_NOVO,
@@ -597,29 +633,49 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22():
                                     group by 
                                             LEFT(ANOMESDIA,6),
                                             INDBD,
-                                            PRODUTO_NOVO
+                                            PRODUTO_NOVO*/
+
                             ) DU_MES_PRODUTO ON	A.INDBD = DU_MES_PRODUTO.INDBD AND 
-                                                    case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = DU_MES_PRODUTO.PRODUTO_NOVO AND
-                                                    A.DATA = DU_MES_PRODUTO.ANOMES
+                                                    A.grupo_plano = DU_MES_PRODUTO.PRODUTO AND
+                                                    A.DATA = DU_MES_PRODUTO.ANOMES AND
+													 CASE WHEN A.SEGMENTO IN ('EMP CLI','EMP PDV') THEN 'EMPRESARIAL' ELSE A.SEGMENTO END = DU_MES_PRODUTO.SEGMENTO
+													-- AND
+													--A.SEGMENTO = DU_MES_PRODUTO.SEGMENTO
 
                     /* DU POR DIA PARA PRODUTO */
-                    left JOIN (SELECT 
-                                        ANOMESDIA,
-                                        LEFT(ANOMESDIA,6) ANOMES,
-                                        INDBD,
-                                        PRODUTO_NOVO,
-                                        SUM(cast(rtrim(ltrim(replace(VALOR,',','.'))) as float)) VALOR 
-                                FROM TBL_PC_DU_PRODUTO
-                                where left(ANOMESDIA,6) = @ANOMES
-                                group by 
-                                        ANOMESDIA,
-                                        LEFT(ANOMESDIA,6),
-                                        INDBD,
-                                        PRODUTO_NOVO
-                                ) P ON 
-                                        A.INDBD = P.INDBD AND 
-                                        case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = P.PRODUTO_NOVO AND
-                                        A.DATA = P.ANOMES
+                    left JOIN ( SELECT 
+                                            ANOMESDIA,
+											ANOMES,
+                                            INDBD,
+                                            PRODUTO as PRODUTO_NOVO,
+											SEGMENTO,
+                                            SUM(DU) VALOR
+                                    FROM TBL_PC_DU_PRODUTO_SEGMENTO
+                                    where ANOMES = @ANOMES
+                                    group by 
+                                            ANOMESDIA,
+											ANOMES,
+                                            INDBD,
+                                            PRODUTO,
+											SEGMENTO
+								  /*  SELECT 
+                                            LEFT(ANOMESDIA,6) ANOMES,
+                                            INDBD,
+                                            PRODUTO_NOVO,
+                                            SUM(cast(rtrim(ltrim(replace(VALOR,',','.'))) as float)) VALOR 
+                                    FROM TBL_PC_DU_PRODUTO
+                                    where left(ANOMESDIA,6) = @ANOMES
+                                    group by 
+                                            LEFT(ANOMESDIA,6),
+                                            INDBD,
+                                            PRODUTO_NOVO*/
+
+                            ) P ON	A.INDBD = P.INDBD AND 
+                                    A.grupo_plano = P.PRODUTO_NOVO AND
+                                    A.DATA = P.ANOMES AND
+									 CASE WHEN A.SEGMENTO IN ('EMP CLI','EMP PDV') THEN 'EMPRESARIAL' ELSE A.SEGMENTO END = P.SEGMENTO
+									-- AND
+									--A.SEGMENTO = DU_MES_PRODUTO.SEGMENTO
                     
                                     
                     WHERE --a.canal_rb not in ('outros bri', 'tlv ativo bri', 'tlv receptivo bri', 'tlv outros bri','Anteneiros','tlv bri','bri') and
@@ -1092,7 +1148,7 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
                             CASE WHEN A.grupo_plano IN ('OI GALERA PRÉ', 'PRÉ-PAGO') THEN 'PRÉ-PAGO' ELSE A.grupo_plano END GRUPO_PLANO,
                             A.canal_rb CANAL, 
                             REG.REGIONAL_AGRUPADA REGIONAL,
-                            SEGMENTO,
+                            a.SEGMENTO,
                             LTRIM(RTRIM(A.FILIAL)) UF,
                             RIGHT(C.ANOMESDIA,2) AS DIA,
                             case 
@@ -1110,39 +1166,113 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
 
                     /* TOTAL DU POR REGIONAL - CANAL */
                     left JOIN (
-                                    SELECT 
-                                        * 
-                                    FROM TBL_IND_VAR_DU_SUMARIZADO
-                                    where ANOMES = @ANOMES
-                            ) DU_MES ON A.INDBD = DU_MES.INDBD AND 
-                                                        --a.GRUPO_PLANO = DU_MES.PRODUTO_NOVO AND
-                                                        case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = DU_MES.PRODUTO_NOVO AND
-                                                        CASE WHEN A.CANAL_RB = 'Smart Message' THEN 'TLV Outros' 
-                                                        ELSE A.CANAL_RB END = DU_MES.CANAL AND
-                                                        A.REGIONAL = DU_MES.REGIONAL AND
-                                                        A.DATA = DU_MES.ANOMES
+                                   -- SELECT 
+                                   --     * 
+                                   -- FROM TBL_IND_VAR_DU_SUMARIZADO
+                                   --where ANOMES = @ANOMES
+				/* --------------- ALTERADO EM 11/01/2023 -----------------------*/
+				SELECT
+					INDBD,
+					ANOMES,
+					PRODUTO AS PRODUTO_NOVO,
+					SEGMENTO,
+					SUM(DU) AS VALOR
+				FROM TBL_PC_DU_PRODUTO_SEGMENTO
+				where ANOMES = @ANOMES
+				GROUP BY INDBD,ANOMES, PRODUTO,SEGMENTO
+
+                            ) DU_MES ON A.INDBD = DU_MES.INDBD
+                                        --a.GRUPO_PLANO = DU_MES.PRODUTO_NOVO AND
+                                        --case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = DU_MES.PRODUTO_NOVO AND
+                                        AND A.grupo_plano = DU_MES.PRODUTO_NOVO
+					--AND CASE WHEN A.CANAL_RB = 'Smart Message' THEN 'TLV Outros' ELSE A.CANAL_RB END = DU_MES.CANAL 
+					--AND A.REGIONAL = DU_MES.REGIONAL 
+					AND A.DATA = DU_MES.ANOMES
+					AND CASE WHEN A.SEGMENTO IN ('EMP CLI','EMP PDV') THEN 'EMPRESARIAL' ELSE A.SEGMENTO END = DU_MES.SEGMENTO
 
                     /* DU POR DIA PARA REGIONAL - CANAL */
-                    left JOIN (SELECT ANOMESDIA,
-                                    left(ANOMESDIA,6) ANOMES,
-                                    INDBD,
-                                    CASE WHEN DU_DIA.PRODUTO IN ('OI GALERA PRÉ', 'PRÉ-PAGO') THEN 'PRÉ-PAGO' ELSE DU_DIA.PRODUTO END PRODUTO_NOVO,
-                                    CANAL,
-                                    REGIONAL,
-                                    valor
-                                FROM TBL_pc_du AS DU_DIA
-                                            where left(ANOMESDIA,6) = @ANOMES
+                    left JOIN (/*
+                                        SELECT ANOMESDIA,
+                                        left(ANOMESDIA,6) ANOMES,
+                                        INDBD,
+                                        CASE WHEN DU_DIA.PRODUTO IN ('OI GALERA PRÉ', 'PRÉ-PAGO') THEN 'PRÉ-PAGO' ELSE DU_DIA.PRODUTO END PRODUTO_NOVO,
+                                        CANAL,
+                                        REGIONAL,
+                                        valor
+                                        FROM TBL_pc_du AS DU_DIA
+                                        where left(ANOMESDIA,6) = @ANOMES
+                                */
+					SELECT
+					        ANOMESDIA,
+					        INDBD,
+					        ANOMES,
+					        PRODUTO AS PRODUTO_NOVO,
+					        SEGMENTO,
+					        SUM(DU) AS VALOR
+					FROM TBL_PC_DU_PRODUTO_SEGMENTO
+					where ANOMES = @ANOMES
+					GROUP BY ANOMESDIA,INDBD,ANOMES, PRODUTO,SEGMENTO
+
                                 ) C ON 
                                         A.INDBD = C.INDBD AND 
-                                        case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = C.PRODUTO_NOVO AND
-                                        CASE WHEN A.CANAL_RB = 'Smart Message' THEN 'TLV Outros' ELSE
-                                        A.CANAL_RB END = C.CANAL AND
-                                        A.REGIONAL = C.REGIONAL and
-                                        A.DATA = C.ANOMES
+                                        A.grupo_plano = C.PRODUTO_NOVO AND
+					--case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = C.PRODUTO_NOVO AND
+                                        --CASE WHEN A.CANAL_RB = 'Smart Message' THEN 'TLV Outros' ELSE A.CANAL_RB END = C.CANAL AND
+                                        --A.REGIONAL = C.REGIONAL and
+                                        CASE WHEN A.SEGMENTO IN ('EMP CLI','EMP PDV') THEN 'EMPRESARIAL' ELSE A.SEGMENTO END = C.SEGMENTO and
+					A.DATA = C.ANOMES
                     
                     /* TOTAL DU POR PRODUTOS */
-                    left JOIN (
-                                    SELECT 
+                    left JOIN (SELECT 
+                                ANOMES,
+                                INDBD,
+                                PRODUTO,
+				SEGMENTO,
+                                SUM(DU) VALOR
+                               FROM TBL_PC_DU_PRODUTO_SEGMENTO
+                               where ANOMES = @ANOMES
+                               group by 
+                                        ANOMES,
+                                        INDBD,
+                                        PRODUTO,
+					SEGMENTO
+					/*  SELECT 
+                                                LEFT(ANOMESDIA,6) ANOMES,
+                                                INDBD,
+                                                PRODUTO_NOVO,
+                                                SUM(cast(rtrim(ltrim(replace(VALOR,',','.'))) as float)) VALOR 
+                                               FROM TBL_PC_DU_PRODUTO
+                                                where left(ANOMESDIA,6) = @ANOMES
+                                                group by 
+                                                        LEFT(ANOMESDIA,6),
+                                                        INDBD,
+                                                        PRODUTO_NOVO
+                                        */
+
+                            ) DU_MES_PRODUTO ON	A.INDBD = DU_MES_PRODUTO.INDBD AND 
+                                                    A.grupo_plano = DU_MES_PRODUTO.PRODUTO AND
+                                                    A.DATA = DU_MES_PRODUTO.ANOMES AND
+						 CASE WHEN A.SEGMENTO IN ('EMP CLI','EMP PDV') THEN 'EMPRESARIAL' ELSE A.SEGMENTO END = DU_MES_PRODUTO.SEGMENTO
+						-- AND
+						--A.SEGMENTO = DU_MES_PRODUTO.SEGMENTO
+
+                    /* DU POR DIA PARA PRODUTO */
+                    left JOIN ( SELECT 
+                                            ANOMESDIA,
+											ANOMES,
+                                            INDBD,
+                                            PRODUTO as PRODUTO_NOVO,
+											SEGMENTO,
+                                            SUM(DU) VALOR
+                                    FROM TBL_PC_DU_PRODUTO_SEGMENTO
+                                    where ANOMES = @ANOMES
+                                    group by 
+                                            ANOMESDIA,
+											ANOMES,
+                                            INDBD,
+                                            PRODUTO,
+											SEGMENTO
+								  /*  SELECT 
                                             LEFT(ANOMESDIA,6) ANOMES,
                                             INDBD,
                                             PRODUTO_NOVO,
@@ -1152,29 +1282,14 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
                                     group by 
                                             LEFT(ANOMESDIA,6),
                                             INDBD,
-                                            PRODUTO_NOVO
-                            ) DU_MES_PRODUTO ON	A.INDBD = DU_MES_PRODUTO.INDBD AND 
-                                                    case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = DU_MES_PRODUTO.PRODUTO_NOVO AND
-                                                    A.DATA = DU_MES_PRODUTO.ANOMES
+                                            PRODUTO_NOVO*/
 
-                    /* DU POR DIA PARA PRODUTO */
-                    left JOIN (SELECT 
-                                        ANOMESDIA,
-                                        LEFT(ANOMESDIA,6) ANOMES,
-                                        INDBD,
-                                        PRODUTO_NOVO,
-                                        SUM(cast(rtrim(ltrim(replace(VALOR,',','.'))) as float)) VALOR 
-                                FROM TBL_PC_DU_PRODUTO
-                                where left(ANOMESDIA,6) = @ANOMES
-                                group by 
-                                        ANOMESDIA,
-                                        LEFT(ANOMESDIA,6),
-                                        INDBD,
-                                        PRODUTO_NOVO
-                                ) P ON 
-                                        A.INDBD = P.INDBD AND 
-                                        case when A.grupo_plano = 'NOVA FIBRA' then 'FIBRA' ELSE A.GRUPO_PLANO END = P.PRODUTO_NOVO AND
-                                        A.DATA = P.ANOMES
+                            ) P ON	A.INDBD = P.INDBD AND 
+                                    A.grupo_plano = P.PRODUTO_NOVO AND
+                                    A.DATA = P.ANOMES AND
+									 CASE WHEN A.SEGMENTO IN ('EMP CLI','EMP PDV') THEN 'EMPRESARIAL' ELSE A.SEGMENTO END = P.SEGMENTO
+									-- AND
+									--A.SEGMENTO = DU_MES_PRODUTO.SEGMENTO
                     
                                     
                     WHERE --a.canal_rb not in ('outros bri', 'tlv ativo bri', 'tlv receptivo bri', 'tlv outros bri','Anteneiros','tlv bri','bri') and
@@ -1436,8 +1551,8 @@ while opcaoSelecionada != 8:
 	elif opcaoSelecionada == '3':
 		print('Opção 3...')
 		executa_procedure_sql_simples()
-		montaExcelTendVll()
-		enviaEmaileAnexo()
+		#montaExcelTendVll()
+		#enviaEmaileAnexo()
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '4':
@@ -1459,7 +1574,7 @@ while opcaoSelecionada != 8:
 		ATIVAR_TEND_TABLEAU_teste_Jan22()
 		executa_procedure_sql('SP_PC_BASES_SHAREPOINT',param)
 		ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
-		#atualiza_TB_VALIDA_CARGA_TENDENCIA()
+		atualiza_TB_VALIDA_CARGA_TENDENCIA()
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '7':
