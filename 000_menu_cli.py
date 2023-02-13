@@ -58,11 +58,14 @@ def puxa_dts_cargas(em_loop):
 					arquivo=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[9]').text_content())
 					DataFim=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[8]').text_content())
 					Projeto=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[1]').text_content())
+					Status= (pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[6]').text_content())
+					
 					if Projeto == 'BASE_FIBRA' or Projeto == 'NOVA_FIBRA':
-						if DataFim == '\xa0':
-							DataFim = '01/01/1900 00:00:00'
-						Status=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[6]').text_content())
-						dicio.update({arquivo:DataFim})
+						if Status == 'Carga em andamento' or Status == 'Carga realizada':
+							if DataFim == '\xa0':
+								DataFim = '01/01/1900 00:00:00'
+								#Status=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[6]').text_content())
+							dicio.update({arquivo:DataFim})
 					linha += 1
 					barra_progresso.update(1)
 		navegador.close()
