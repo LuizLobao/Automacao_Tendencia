@@ -18,6 +18,8 @@ from tqdm import tqdm
 #FIXME caso deixe o programa rodando de um dia para o outro a variavel não atualiza - causando problemas no dia seguinte 
 hoje = datetime.today().strftime('%d/%m/%Y')
 AAAAMMDD = datetime.today().strftime('%Y%m%d')
+AAAA_MM = datetime.today().strftime('%Y-%m')
+AAAAMM = datetime.today().strftime('%Y%m')
 resposta = ''
 
 def menu():
@@ -38,13 +40,12 @@ def menu():
 	return selecionada
 
 def data_mod_arquivo():
-	arquivo1 = 'Demonstrativo Gross'
-	arquivo = (f'Y:\{arquivo1}.xlsb')
+	arquivo1 = f'Demonstrativo Gross_Analitico_{AAAAMM}.csv'
+	arquivo = (f'Y:\{arquivo1}')
 	modificado = time.strftime('%d/%m/%Y', time.gmtime(os.path.getmtime(arquivo)))
 	return (modificado)
 
 def puxa_dts_cargas(em_loop):
-#FIXME considerar a coluna PROJETO quando verificar as datas. A mesma base é baixada mais de uma vez para projetos diferentes - causando erro na leitura
 	dicio = {"arquivo":"data","HOJE":hoje}
 	with sync_playwright() as p:
 
@@ -56,22 +57,21 @@ def puxa_dts_cargas(em_loop):
 			while linha <= 93:
 					arquivo=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[9]').text_content())
 					DataFim=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[8]').text_content())
-					#FIXME criar verificação para quando a data vier fazia - split causando erro
-					if DataFim == '':
-						DataFim = '01/01/1900 00:00:00'
-					Status=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[6]').text_content())
-					#print(arquivo)
-					if Status == 'Carga realizada' or Status == 'Carga em andamento':
+					Projeto=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[1]').text_content())
+					if Projeto == 'BASE_FIBRA' or Projeto == 'NOVA_FIBRA':
+						if DataFim == '\xa0':
+							DataFim = '01/01/1900 00:00:00'
+						Status=(pagina.locator(f'xpath = //*[@id="mytable"]/tbody/tr[{linha}]/td[6]').text_content())
 						dicio.update({arquivo:DataFim})
-					#else :
-					#	DataFim == '00/00/0000 00:00:00'
-					#	dicio.update({arquivo:DataFim})
 					linha += 1
 					barra_progresso.update(1)
 		navegador.close()
 	
+
+	print(dicio)
+
 	dataDemostrativoGross = data_mod_arquivo()
-	
+
 	
 	BOV_1067 = (f'{dicio["BOV_1067.TXT"].split(" ")[0]}')
 	BOV_1058 = (f'{dicio["BOV_1058.TXT"].split(" ")[0]}')
@@ -125,29 +125,31 @@ def colocar_puxa_dts_carga_em_loop(em_loop):
 		puxa_dts_cargas('s')
 
 def copia_arquivo_renomeia():
-    shutil.copy(r"Y:\\Demonstrativo Gross.xlsb", fr'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_{AAAAMMDD}.xlsb')
+    shutil.copy(rf"Y:\\Demonstrativo Gross_Analitico_{AAAAMM}.csv", fr'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_Analitico_{AAAAMMDD}.csv')
     
 def monta_tabdin_demonstrativo_gross():
-    excel_file = f'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_{AAAAMMDD}.xlsb'
+    in_file = f'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_Analitico_{AAAAMMDD}.csv'
     dest_filename = f'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_{AAAAMMDD}.xlsx'
 
-    df = pd.read_excel(excel_file, sheet_name='Database', engine='pyxlsb')
-    pt_instalacao = df.query('TIPO == "INSTALACAO"').pivot_table(
-                                                        values="PROJ", 
-                                                        index=["UF"], 
-                                                        columns="MERCADO", 
-                                                        aggfunc=sum,
-                                                        fill_value=0,
-                                                        margins=True, margins_name="INSTALACAO",
-                                                        )
-    pt_migracao = df.query('TIPO == "MIGRACAO"').pivot_table(
-                                                        values=["PROD","PROJ"], 
-                                                        #index=["UF"], 
-                                                        index="MERCADO", 
-                                                        aggfunc=sum,
-                                                        fill_value=0,
-                                                        margins=True, margins_name="MIGRACAO",
-                                                        )
+    df = pd.read_csv(in_file, decimal=',',sep=';', quotechar='"')
+    df1=df[df['TIPO'].str.contains("INSTALACAO")]
+    pt_instalacao = df1.query('TIPO == "INSTALACAO"'and 'MERCADO in ("EMPRESARIAL", "VAREJO")').pivot_table(
+                                                                                                        values="PROJ", 
+                                                                                                        index=["UF"], 
+                                                                                                        columns="MERCADO", 
+                                                                                                        aggfunc=sum,
+                                                                                                        fill_value=0,
+                                                                                                        margins=True, margins_name="INSTALACAO",
+                                                                                                        )
+    df2=df[df['TIPO'].str.contains("MIGRACAO")]
+    pt_migracao = df2.query('TIPO == "MIGRACAO"'and 'MERCADO in ("EMPRESARIAL","VAREJO")').pivot_table(
+                                                                                                        values=["PROD","PROJ"], 
+                                                                                                        #index=["UF"], 
+                                                                                                        index="MERCADO", 
+                                                                                                        aggfunc=sum,
+                                                                                                        fill_value=0,
+                                                                                                        margins=True, margins_name="MIGRACAO",
+                                                                                                        )
     with pd.ExcelWriter(dest_filename) as writer:
         pt_instalacao.to_excel(writer, sheet_name="TabDin",startcol=0, startrow=0)
         pt_migracao.to_excel(writer, sheet_name="TabDin",startcol=6, startrow=0)
@@ -1583,6 +1585,13 @@ while opcaoSelecionada != 8:
 		executa_procedure_sql(proc, param)
 		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
 		executa_procedure_sql(proc, param)
+
+		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_DIARIO_porRegiao'
+		executa_procedure_sql(proc, param)
+
+		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_DIARIO_porRegiao_IndCombo'
+		executa_procedure_sql(proc, param)
+
 		proc = 'SP_PC_TBL_RE_RELATORIO_RC_V2_TEND'
 		executa_procedure_sql(proc, param)
 		a = input('Tecle qualquer tecla para continuar...')
