@@ -1,26 +1,64 @@
-import segredos
-import pyodbc
-from playwright.sync_api import sync_playwright
-from datetime import date, datetime
-import pandas as pd
-import win32com.client as win32
-import plotly.express as px
-import time
+#pip install pillow
+import os
+import win32com.client as client
+from PIL import ImageGrab
+
+# make sure you use either a raw string OR escape characters for the backslash. 
+# You CANNOT use forward slash format with `win32com`.
+workbook_path = r'S:\Resultados\01_Relatorio Diario\1 - Base Eventos\02 - TENDÊNCIA\TEND_FIBRA_e_UPDATEs.xlsx'
+
+# start an instance of Excel
+excel = client.Dispatch('Excel.Application')
+
+# open the workbook
+wb = excel.Workbooks.Open(workbook_path)
+
+# select the sheet you want... use whatever index method you want to use....
+
+### by item
+#sheet = wb.Sheets.Item(1)
+
+### by index
+#sheet = wb.Sheets[0]
+
+### by name
+sheet = wb.Sheets['UPDATE_TENDENCIA_VLL']
+
+# copy the target range
+copyrange= sheet.Range('A23:D45')
+copyrange.CopyPicture(Appearance=1, Format=2)
+
+# grab the saved image from the clipboard and save to working directory
+ImageGrab.grabclipboard().save('paste.png')
 
 
-data = pd.read_csv(r'C:\Users\oi066724\Downloads\BOVs\unzip\HADOOP_6163_488157_RDA_CLIENTCO_GROSS20221201_20221218_213509.TXT', sep="\t")
-df = pd.DataFrame(data)
+# get the path of the current working directory and create image path
+image_path = os.getcwd() + '\\paste.png'
 
-print(df)
+# create a html body template and set the **src** property with `{}` so that we can use
+# python string formatting to insert a variable
+html_body = """
+    <div>
+          Please review the following report and response with your feedback.
+    </div>
+    <div>
+        <img src={}></img>
+    </div>
+"""
 
-#dados_conexao = (
-#    "Driver={SQL Server};"
-#    f"Server={segredos.db_server};"
-#    f"Database={segredos.db_name};"
-#    f"UID={segredos.db_user};"
-#    f"PWD={segredos.db_pass}"
-#)
-#conexao = pyodbc.connect(dados_conexao)
-#print("Conectado ao banco para executar PROCEDURE")
-#
-#cursor = conexao.cursor()
+# startup and instance of outlook
+outlook = client.Dispatch('Outlook.Application')
+
+# create a message
+message = outlook.CreateItem(0)
+
+# set the message properties
+message.To = 'luiz.lobao@oi.net.br'
+message.Subject = 'Please review!'
+message.HTMLBody = html_body.format(image_path)
+
+# display the message to review
+message.Display()
+
+# save or send the message
+message.Send()
