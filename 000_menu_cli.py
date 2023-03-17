@@ -451,10 +451,10 @@ while opcaoSelecionada != 8:
 
 	elif opcaoSelecionada == '7':
 		print('Opção 7...')
-		#proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_Tendencia_porRegiao'
-		#executa_procedure_sql(proc, param)
-		#proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
-		#executa_procedure_sql(proc, param)
+		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_Tendencia_porRegiao'
+		executa_procedure_sql(proc, param)
+		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
+		executa_procedure_sql(proc, param)
 
 		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_DIARIO_porRegiao'
 		executa_procedure_sql(proc, param)
