@@ -105,32 +105,19 @@ def puxa_dts_cargas(em_loop):
 		colocar_puxa_dts_carga_em_loop(em_loop)
 			
 def colocar_puxa_dts_carga_em_loop(em_loop):
-	if em_loop == 'n' or em_loop == 'N':
+	if em_loop.lower() == 'n':
 		resposta = input('Gostaria de colocar o check em Loop ? (s/n):')
-		if resposta == 's' or resposta == 'S' or em_loop == 's' or em_loop == 'S':
-			print('Esperando 300 segundos = 5 min')
-			time.sleep(60) #60 segundos
-			print('Esperando 240 segundos = 4 min')
-			time.sleep(60) #60 segundos
-			print('Esperando 180 segundos = 3 min')
-			time.sleep(60) #60 segundos
-			print('Esperando 120 segundos = 2 min')
-			time.sleep(60) #60 segundos
-			print('Esperando 60 segundos = 1 min')
-			time.sleep(60) #60 segundos
+		if resposta.lower() == 's' or em_loop.lower() == 's':
+			for t in [300, 240, 180, 120, 60]:
+				print(f'Esperando {t} segundos = {t//60} min')
+				time.sleep(60)
 			puxa_dts_cargas('s')
-	if em_loop == 's' or em_loop == 'S':
-		print('Esperando 300 segundos = 5 min')
-		time.sleep(60) #60 segundos
-		print('Esperando 240 segundos = 4 min')
-		time.sleep(60) #60 segundos
-		print('Esperando 180 segundos = 3 min')
-		time.sleep(60) #60 segundos
-		print('Esperando 120 segundos = 2 min')
-		time.sleep(60) #60 segundos
-		print('Esperando 60 segundos = 1 min')
-		time.sleep(60) #60 segundos
+	if em_loop.lower() == 's':
+		for t in [300, 240, 180, 120, 60]:
+			print(f'Esperando {t} segundos = {t//60} min')
+			time.sleep(60)
 		puxa_dts_cargas('s')
+
 
 def copia_arquivo_renomeia():
     shutil.copy(rf"Y:\\Demonstrativo Gross_Analitico_{AAAAMM}.csv", fr'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_Analitico_{AAAAMMDD}.csv')
@@ -464,10 +451,10 @@ while opcaoSelecionada != 8:
 
 	elif opcaoSelecionada == '7':
 		print('Opção 7...')
-		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_Tendencia_porRegiao'
-		executa_procedure_sql(proc, param)
-		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
-		executa_procedure_sql(proc, param)
+		#proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_Tendencia_porRegiao'
+		#executa_procedure_sql(proc, param)
+		#proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
+		#executa_procedure_sql(proc, param)
 
 		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_DIARIO_porRegiao'
 		executa_procedure_sql(proc, param)
