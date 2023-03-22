@@ -1,4 +1,3 @@
-#TODO trocar query digitada dentro da def por um arquivo SQL
 #TODO Salvar status de cada etapa. Só rodar a seguinte se a anterior ja rodou
 #TODO estudar a possibilidade de passar uma lista de PROCEDURES e rodar em Loop - desta forma realiza 1 unica conexao
 
@@ -10,7 +9,8 @@ import segredos
 import pyodbc
 #from telnetlib import theNULL
 from datetime import date, datetime, timedelta
-from openpyxl import load_workbook
+#from openpyxl import load_workbook
+import openpyxl
 from playwright.sync_api import sync_playwright
 import subprocess
 from tqdm import tqdm
@@ -51,7 +51,7 @@ def data_mod_arquivo():
 	return (modificado)
 
 def puxa_dts_cargas(em_loop):
-	dicio = {"arquivo":"data","HOJE":hoje}
+	dicio = {"arquivo":"data","HOJE":hoje,"BOV_1066.TXT":'01/01/1900 00:00:00',"BOV_1065.TXT":'01/01/1900 00:00:00',"BOV_1059.TXT":'01/01/1900 00:00:00',"BOV_1067.TXT":'01/01/1900 00:00:00',"BOV_1064.TXT":'01/01/1900 00:00:00',"BOV_1058.TXT":'01/01/1900 00:00:00',"HADOOP_6162.TXT":'01/01/1900 00:00:00',"HADOOP_6163.TXT":'01/01/1900 00:00:00'}
 	with sync_playwright() as p:
 
 		navegador = p.chromium.launch(headless=True)
@@ -76,11 +76,8 @@ def puxa_dts_cargas(em_loop):
 		navegador.close()
 	
 
-	print(dicio)
-
+	#print(dicio)
 	dataDemostrativoGross = data_mod_arquivo()
-
-	
 	BOV_1067 = (f'{dicio["BOV_1067.TXT"].split(" ")[0]}')
 	BOV_1058 = (f'{dicio["BOV_1058.TXT"].split(" ")[0]}')
 	BOV_1059 = (f'{dicio["BOV_1059.TXT"].split(" ")[0]}')
@@ -89,14 +86,46 @@ def puxa_dts_cargas(em_loop):
 	BOV_6162 = (f'{dicio["HADOOP_6162.TXT"].split(" ")[0]}')
 	BOV_6163 = (f'{dicio["HADOOP_6163.TXT"].split(" ")[0]}')
 
-	print(f"1067: {BOV_1067}")
-	print(f"1058: {BOV_1058}")
-	print(f"1059: {BOV_1059}")
-	print(f"1065: {BOV_1065}")
-	print(f"1064: {BOV_1064}")
-	print(f"6162: {BOV_6162}")
-	print(f"6163: {BOV_6163}")
-	print(f'Demonstrativo Gross: {dataDemostrativoGross}')
+	if BOV_1067 != hoje:
+		print('\x1b[1;33;41m' + f"1067: {BOV_1067}" + '\x1b[0m')
+	else:
+		print('\x1b[1;32;40m' + f"1067: {BOV_1067}" + '\x1b[0m')
+
+	if BOV_1058 != hoje:
+		print('\x1b[1;33;41m' + f"1058: {BOV_1058}" + '\x1b[0m')
+	else:
+		print('\x1b[1;32;40m' + f"1058: {BOV_1058}" + '\x1b[0m')	
+	
+	if BOV_1059 != hoje:
+		print('\x1b[1;33;41m' + f"1059: {BOV_1059}" + '\x1b[0m')
+	else:
+		print('\x1b[1;32;40m' + f"1059: {BOV_1059}" + '\x1b[0m')
+
+	if BOV_1065 != hoje:
+		print('\x1b[1;33;41m' + f"1065: {BOV_1065}" + '\x1b[0m')
+	else:
+		print('\x1b[1;32;40m' + f"1065: {BOV_1065}" + '\x1b[0m')
+
+	if BOV_1064 != hoje:
+		print('\x1b[1;33;41m' + f"1064: {BOV_1064}" + '\x1b[0m')
+	else:
+		print('\x1b[1;32;40m' + f"1064: {BOV_1064}" + '\x1b[0m')
+
+	if BOV_6162 != hoje:
+		print('\x1b[1;33;41m' + f"6162: {BOV_6162}" + '\x1b[0m')
+	else:
+		print('\x1b[1;32;40m' + f"6162: {BOV_6162}" + '\x1b[0m')
+
+	if BOV_6163 != hoje :
+		print('\x1b[1;33;41m' + f"6163: {BOV_6163}"+ '\x1b[0m')
+	else:
+		print('\x1b[1;32;40m' + f"6163: {BOV_6163}"+ '\x1b[0m')
+
+	if dataDemostrativoGross != hoje :
+		print('\x1b[1;33;41m' + f"Demonstrativo Gross: {dataDemostrativoGross}"+ '\x1b[0m')
+	else:
+		print('\x1b[1;32;40m' + f"Demonstrativo Gross: {dataDemostrativoGross}"+ '\x1b[0m')
+
 
 	if hoje == BOV_1067 == BOV_1058 == BOV_1059 == BOV_1065 == BOV_1064 == BOV_6162 == BOV_6163:
 		print('Todos os arquivos da BOV têm a data de hoje...podemos continuar')
@@ -113,11 +142,12 @@ def colocar_puxa_dts_carga_em_loop(em_loop):
 				time.sleep(60)
 			puxa_dts_cargas('s')
 	if em_loop.lower() == 's':
+		#continua = input('Continuar no loop (S/N):')
+		#if continua.lower() == 's':
 		for t in [300, 240, 180, 120, 60]:
 			print(f'Esperando {t} segundos = {t//60} min')
 			time.sleep(60)
 		puxa_dts_cargas('s')
-
 
 def copia_arquivo_renomeia():
     shutil.copy(rf"Y:\\Demonstrativo Gross_Analitico_{AAAAMM}.csv", fr'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\Insumos_Tendência\\Demonstrativo Gross_Analitico_{AAAAMMDD}.csv')
@@ -358,6 +388,9 @@ def atualiza_TB_VALIDA_CARGA_TENDENCIA():
 
 def enviaEmailFimProcesso():		
 	workbook_path = r'S:\Resultados\01_Relatorio Diario\1 - Base Eventos\02 - TENDÊNCIA\TEND_FIBRA_e_UPDATEs.xlsx'
+	attachment_path = r'S:\Resultados\01_Relatorio Diario\1 - Base Eventos\02 - TENDÊNCIA\tend_email.xlsx'
+	image_path = r'C:\Users\oi066724\Documents\Python\Automacao_Tendencia\paste.png'
+
 	excel = win32.Dispatch('Excel.Application')
 
 	wb = excel.Workbooks.Open(workbook_path)
@@ -369,8 +402,6 @@ def enviaEmailFimProcesso():
 	copyrange.CopyPicture(Appearance=1, Format=2)
 	ImageGrab.grabclipboard().save('paste.png')
 	excel.Quit()
-
-	image_path = r'C:\Users\oi066724\Documents\Python\Automacao_Tendencia\paste.png'
 
 	# create a html body template and set the **src** property with `{}` so that we can use
 	# python string formatting to insert a variable
@@ -395,6 +426,7 @@ def enviaEmailFimProcesso():
 	message.To = segredos.lista_email_fim_processo
 	message.Subject = f'Tendências Liberadas: {hoje}!'
 	message.HTMLBody = html_body.format(image_path)
+	message.Attachments.Add(attachment_path)
 
 	# display the message to review
 	message.Display()
@@ -403,6 +435,27 @@ def enviaEmailFimProcesso():
 	message.Send()
 	print("Email Enviado")
 
+def copiar_colar_excel(origem, destino, planilha_origem):
+    # Abrir arquivo de origem
+    wb_origem = openpyxl.load_workbook(origem, data_only=True)
+    ws_origem = wb_origem[planilha_origem]
+
+    # Selecionar o range de células a ser copiado
+    range_copia = ws_origem['A23':'D49']
+
+    # Abrir arquivo de destino
+    wb_destino = openpyxl.Workbook()
+    ws_destino = wb_destino.active
+
+    # Copiar e colar como valor
+    for row in range_copia:
+        nova_linha = []
+        for cell in row:
+            nova_linha.append(cell.value)
+        ws_destino.append(nova_linha)
+
+    # Salvar arquivo de destino
+    wb_destino.save(destino)
 
 param = AAAAMM
 opcaoSelecionada = 0
@@ -455,22 +508,23 @@ while opcaoSelecionada != 8:
 		executa_procedure_sql(proc, param)
 		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
 		executa_procedure_sql(proc, param)
-
 		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_DIARIO_porRegiao'
 		executa_procedure_sql(proc, param)
-
 		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_DIARIO_porRegiao_IndCombo'
 		executa_procedure_sql(proc, param)
-
 		proc = 'SP_PC_TBL_RE_RELATORIO_RC_V2_TEND'
 		executa_procedure_sql(proc, param)
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '8':
 		print('Opção 8...')
+		diretorio_arquivo_origem=r'S:\Resultados\01_Relatorio Diario\1 - Base Eventos\02 - TENDÊNCIA\TEND_FIBRA_e_UPDATEs.xlsx'
+		diretorio_arquivo_destino=r'S:\Resultados\01_Relatorio Diario\1 - Base Eventos\02 - TENDÊNCIA\tend_email.xlsx'
+		planilha_origem='UPDATE_TENDENCIA_VLL'
+		copiar_colar_excel(diretorio_arquivo_origem, diretorio_arquivo_destino, planilha_origem)
+
 		enviaEmailFimProcesso()
 		a = input('Tecle qualquer tecla para continuar...')
-
 
 	elif opcaoSelecionada == '9':
 		print('Opção 9...')
