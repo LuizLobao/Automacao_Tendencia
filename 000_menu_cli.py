@@ -459,7 +459,7 @@ def copiar_colar_excel(origem, destino, planilha_origem):
 
 param = AAAAMM
 opcaoSelecionada = 0
-while opcaoSelecionada != 8:
+while opcaoSelecionada != 9:
 	opcaoSelecionada = menu()
 	if opcaoSelecionada == '1':
 		print('Iniciando a verificação de datas...')
