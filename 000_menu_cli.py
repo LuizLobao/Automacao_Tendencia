@@ -1,20 +1,13 @@
 #TODO Salvar status de cada etapa. Só rodar a seguinte se a anterior ja rodou
 #TODO estudar a possibilidade de passar uma lista de PROCEDURES e rodar em Loop - desta forma realiza 1 unica conexao
 
-import shutil,os,time
-import time
+import shutil,os,time,pyodbc, segredos, openpyxl, subprocess
 import win32com.client as win32
 import pandas as pd
-import segredos
-import pyodbc
 #from telnetlib import theNULL
 from datetime import date, datetime, timedelta
-#from openpyxl import load_workbook
-import openpyxl
 from playwright.sync_api import sync_playwright
-import subprocess
 from tqdm import tqdm
-import os
 from PIL import ImageGrab
 
 #FIXME caso deixe o programa rodando de um dia para o outro a variavel não atualiza - causando problemas no dia seguinte 

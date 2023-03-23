@@ -17,13 +17,14 @@ Funcionalidades a Desenvolver:
 Funcionalidades Futuras:
  - [ ] Log de data/hora de execução de cada rotina (inicio e fim)
  - [ ] Comparação das bases de D0 vs D-1 antes de seguir o processo
- - [ ] 
+ - [ ] Ao colocar a verificação de Data em LOOP, perguntar se quer continuar o LOOP ou sair - caso nao tenha resposta em X segundos, continuar o Loop.
 
  Pré-Requisitos:
   - no Python:
       - Pandas (pip install pandas)
       - Playwright (pip install playwright)
-      - 
+      - TQDM
+      - PIL
       - 
   - diretórios de rede mapeados:
       - \\naspc01\ger_desempenho_operacional$\Report\Report_Demonstrativo_FTTHJ ---> Y:\
