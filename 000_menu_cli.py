@@ -127,7 +127,7 @@ def puxa_dts_cargas(em_loop):
 		print('\x1b[1;32;40m' + f"Demonstrativo Gross: {dataDemostrativoGross}"+ '\x1b[0m')
 
 
-	if hoje == BOV_1067 == BOV_1058 == BOV_1059 == BOV_1065 == BOV_1064 == BOV_6162 == BOV_6163:
+	if hoje == BOV_1067 == BOV_1058 == BOV_1059 == BOV_1065 == BOV_1064 == BOV_6162 == BOV_6163== dataDemostrativoGross:
 		print('Todos os arquivos da BOV têm a data de hoje...podemos continuar')
 	else:
 		print('Um ou mais arquivos do BOV NÃO têm a data de hoje...aguardar')
