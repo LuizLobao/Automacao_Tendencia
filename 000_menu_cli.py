@@ -1,14 +1,20 @@
 #TODO Salvar status de cada etapa. Só rodar a seguinte se a anterior ja rodou
 #TODO estudar a possibilidade de passar uma lista de PROCEDURES e rodar em Loop - desta forma realiza 1 unica conexao
 
-import shutil,os,time,pyodbc, segredos, openpyxl, subprocess
+import shutil,os,time,pyodbc, segredos, openpyxl, subprocess, requests
 import win32com.client as win32
 import pandas as pd
+from urllib.parse import quote
 #from telnetlib import theNULL
 from datetime import date, datetime, timedelta
 from playwright.sync_api import sync_playwright
 from tqdm import tqdm
 from PIL import ImageGrab
+
+#Para envio de WhatsApp
+num= segredos.num
+key = segredos.key
+
 
 #FIXME caso deixe o programa rodando de um dia para o outro a variavel não atualiza - causando problemas no dia seguinte 
 hoje = (datetime.today()- timedelta(days=0)).strftime('%d/%m/%Y') 
@@ -121,7 +127,9 @@ def puxa_dts_cargas(em_loop):
 
 
 	if hoje == BOV_1067 == BOV_1058 == BOV_1059 == BOV_1065 == BOV_1064 == BOV_6162 == BOV_6163:
-		print('Todos os arquivos da BOV têm a data de hoje...podemos continuar')
+		msg = f'Todos os arquivos da BOV têm a data de hoje...podemos continuar : {datetime.today()}'
+		print(msg)
+		enviaWhats(msg, num, key)
 	else:
 		print('Um ou mais arquivos do BOV NÃO têm a data de hoje...aguardar')
 		colocar_puxa_dts_carga_em_loop(em_loop)
@@ -450,6 +458,11 @@ def copiar_colar_excel(origem, destino, planilha_origem):
     # Salvar arquivo de destino
     wb_destino.save(destino)
 
+def enviaWhats (mensagem, numero, apikey):
+    requests.get(
+    url=f'https://api.callmebot.com/whatsapp.php?phone={numero}&text={quote(mensagem)}&apikey={apikey}'
+    )
+    
 param = AAAAMM
 opcaoSelecionada = 0
 while opcaoSelecionada != 9:
@@ -484,6 +497,10 @@ while opcaoSelecionada != 9:
 		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_FIBRA_VAREJO',param)
 		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_NOVA_FIBRA',param)
 		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_TABELAS_FIBRA',param)
+		
+		msg = f'Tendencias igualadas ao Realizado! : {datetime.today()}'
+		enviaWhats(msg, num, key)
+		
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '6':
@@ -492,6 +509,9 @@ while opcaoSelecionada != 9:
 		executa_procedure_sql('SP_PC_BASES_SHAREPOINT',param)
 		ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
 		atualiza_TB_VALIDA_CARGA_TENDENCIA()
+		
+		msg = f'Bases liberadas para Sharepoint e PowerBi! : {datetime.today()}'
+		enviaWhats(msg, num, key)
 		
 		a = input('Tecle qualquer tecla para continuar...')
 
@@ -507,6 +527,10 @@ while opcaoSelecionada != 9:
 		executa_procedure_sql(proc, param)
 		proc = 'SP_PC_TBL_RE_RELATORIO_RC_V2_TEND'
 		executa_procedure_sql(proc, param)
+		
+		msg = f'Etapas de liberação do Ticket concluídas! : {datetime.today()}'
+		enviaWhats(msg, num, key)
+
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '8':
