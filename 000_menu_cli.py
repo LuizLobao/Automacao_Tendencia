@@ -37,7 +37,8 @@ def menu():
 	print('6) Procedures Finais - usar depois de atualizar a tendência manualmente')
 	print('7) Procedures Receita Contratada')
 	print('8) Envia E-mail Tendencias Liberadas')
-	print('9) Sair')
+	print('9) Envia Lista de PDV Outros')
+	print('10) Sair')
 	print('-------------------------------------------------------------------')
 	selecionada =  input(('Selecione uma das opções acima: #'))
 	print(f'A opção selecionda foi: {selecionada}')
@@ -462,10 +463,56 @@ def enviaWhats (mensagem, numero, apikey):
     requests.get(
     url=f'https://api.callmebot.com/whatsapp.php?phone={numero}&text={quote(mensagem)}&apikey={apikey}'
     )
-    
+
+def EnviaPDVOutros():
+	comando_sql = 'select * from [VW_COD_SAP_OUTROS] order by qtd desc'
+	dados_conexao = (
+		"Driver={SQL Server};"
+		f"Server={segredos.db_server};"
+		f"Database={segredos.db_name};"
+		f"UID={segredos.db_user};"
+		f"PWD={segredos.db_pass}"
+	)
+	conexao = pyodbc.connect(dados_conexao)
+	cursor = conexao.cursor()
+	df=pd.read_sql(comando_sql, conexao)
+	os.makedirs('PDV_OUTROS', exist_ok=True)  
+	df.to_csv('PDV_OUTROS/pdv_outros.csv', sep=';', decimal=',') 
+	attachment_path = r'C:\Users\oi066724\Documents\Python\Automacao_Tendencia\PDV_OUTROS\pdv_outros.csv'
+
+	# create a html body template and set the **src** property with `{}` so that we can use
+	# python string formatting to insert a variable
+	html_body = """
+		<div>
+			Caros, Segue a lista de PDVs que estão aparecendo como OUTROS na BOV.
+			Favor verificar e atualizar a classificação dos mesmos.
+		</div>
+		<br>
+		<br>
+	"""
+
+	# startup and instance of outlook
+	outlook = win32.Dispatch('Outlook.Application')
+
+	# create a message
+	message = outlook.CreateItem(0)
+
+	# set the message properties
+	message.To = segredos.lista_email_pdv_outros
+	message.Subject = f'PDVs Outros: {hoje}!'
+	message.HTMLBody = html_body.format()
+	message.Attachments.Add(attachment_path)
+
+	# display the message to review
+	message.Display()
+
+	# save or send the message
+	message.Send()
+
+
 param = AAAAMM
 opcaoSelecionada = 0
-while opcaoSelecionada != 9:
+while opcaoSelecionada != 10:
 	opcaoSelecionada = menu()
 	if opcaoSelecionada == '1':
 		print('Iniciando a verificação de datas...')
@@ -544,7 +591,12 @@ while opcaoSelecionada != 9:
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '9':
-		print('Opção 9...')
+		print('Opção 9...Enviar PDVs OUTROS')
+		EnviaPDVOutros()
+		a = input('Tecle qualquer tecla para continuar...')
+
+	elif opcaoSelecionada == '10':
+		print('Opção 10...SAIR')
 		break
 	else:
 		print('Opção Inválida')
