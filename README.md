@@ -22,12 +22,18 @@ Funcionalidades Futuras:
  Pré-Requisitos:
   - no Python:
       - Pandas (pip install pandas)
-      - Playwright (pip install playwright)
-      - TQDM
-      - PIL
-      - 
+      - Playwright (pip install pytest-playwright  /  playwright install)
+      - TQDM (pip install tqdm)
+      - PIL (pip install Pillow)
+      - Openpyxl (pip install openpyxl)
+      - Requests (pip install requests)
+      - PyODBC (pip install pyodbc)
+      - PyWin23 (pip install pywin32)
+      -
+      -
+
   - diretórios de rede mapeados:
-      - \\naspc01\ger_desempenho_operacional$\Report\Report_Demonstrativo_FTTHJ ---> Y:\
+      - \\naspc01\ger_desempenho_operacional$\Report\Report_Demonstrativo_FTTH ---> Y:\
       - \\netprd01\Plan_Vendas_InfoGer ----> S:\
 
 
