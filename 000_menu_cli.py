@@ -1,21 +1,20 @@
 #TODO Salvar status de cada etapa. Só rodar a seguinte se a anterior ja rodou
 #TODO estudar a possibilidade de passar uma lista de PROCEDURES e rodar em Loop - desta forma realiza 1 unica conexao
 
-import shutil,os,time
-import time
+import shutil,os,time,pyodbc, segredos, openpyxl, subprocess, requests
 import win32com.client as win32
 import pandas as pd
-import segredos
-import pyodbc
+from urllib.parse import quote
 #from telnetlib import theNULL
 from datetime import date, datetime, timedelta
-#from openpyxl import load_workbook
-import openpyxl
 from playwright.sync_api import sync_playwright
-import subprocess
 from tqdm import tqdm
-import os
 from PIL import ImageGrab
+
+#Para envio de WhatsApp
+num= segredos.num
+key = segredos.key
+
 
 #FIXME caso deixe o programa rodando de um dia para o outro a variavel não atualiza - causando problemas no dia seguinte 
 hoje = (datetime.today()- timedelta(days=0)).strftime('%d/%m/%Y') 
@@ -38,7 +37,8 @@ def menu():
 	print('6) Procedures Finais - usar depois de atualizar a tendência manualmente')
 	print('7) Procedures Receita Contratada')
 	print('8) Envia E-mail Tendencias Liberadas')
-	print('9) Sair')
+	print('9) Envia Lista de PDV Outros')
+	print('10) Sair')
 	print('-------------------------------------------------------------------')
 	selecionada =  input(('Selecione uma das opções acima: #'))
 	print(f'A opção selecionda foi: {selecionada}')
@@ -127,8 +127,10 @@ def puxa_dts_cargas(em_loop):
 		print('\x1b[1;32;40m' + f"Demonstrativo Gross: {dataDemostrativoGross}"+ '\x1b[0m')
 
 
-	if hoje == BOV_1067 == BOV_1058 == BOV_1059 == BOV_1065 == BOV_1064 == BOV_6162 == BOV_6163== dataDemostrativoGross:
-		print('Todos os arquivos da BOV têm a data de hoje...podemos continuar')
+	if hoje == BOV_1067 == BOV_1058 == BOV_1059 == BOV_1065 == BOV_1064 == BOV_6162 == BOV_6163:
+		msg = f'Todos os arquivos da BOV têm a data de hoje...podemos continuar : {datetime.today()}'
+		print(msg)
+		enviaWhats(msg, num, key)
 	else:
 		print('Um ou mais arquivos do BOV NÃO têm a data de hoje...aguardar')
 		colocar_puxa_dts_carga_em_loop(em_loop)
@@ -457,9 +459,60 @@ def copiar_colar_excel(origem, destino, planilha_origem):
     # Salvar arquivo de destino
     wb_destino.save(destino)
 
+def enviaWhats (mensagem, numero, apikey):
+    requests.get(
+    url=f'https://api.callmebot.com/whatsapp.php?phone={numero}&text={quote(mensagem)}&apikey={apikey}'
+    )
+
+def EnviaPDVOutros():
+	comando_sql = 'select * from [VW_COD_SAP_OUTROS] order by qtd desc'
+	dados_conexao = (
+		"Driver={SQL Server};"
+		f"Server={segredos.db_server};"
+		f"Database={segredos.db_name};"
+		f"UID={segredos.db_user};"
+		f"PWD={segredos.db_pass}"
+	)
+	conexao = pyodbc.connect(dados_conexao)
+	cursor = conexao.cursor()
+	df=pd.read_sql(comando_sql, conexao)
+	os.makedirs('PDV_OUTROS', exist_ok=True)  
+	df.to_csv('PDV_OUTROS/pdv_outros.csv', sep=';', decimal=',') 
+	attachment_path = r'C:\Users\oi066724\Documents\Python\Automacao_Tendencia\PDV_OUTROS\pdv_outros.csv'
+
+	# create a html body template and set the **src** property with `{}` so that we can use
+	# python string formatting to insert a variable
+	html_body = """
+		<div>
+			Caros, Segue a lista de PDVs que estão aparecendo como OUTROS na BOV.
+			Favor verificar e atualizar a classificação dos mesmos.
+		</div>
+		<br>
+		<br>
+	"""
+
+	# startup and instance of outlook
+	outlook = win32.Dispatch('Outlook.Application')
+
+	# create a message
+	message = outlook.CreateItem(0)
+
+	# set the message properties
+	message.To = segredos.lista_email_pdv_outros
+	message.Subject = f'PDVs Outros: {hoje}!'
+	message.HTMLBody = html_body.format()
+	message.Attachments.Add(attachment_path)
+
+	# display the message to review
+	message.Display()
+
+	# save or send the message
+	message.Send()
+
+
 param = AAAAMM
 opcaoSelecionada = 0
-while opcaoSelecionada != 8:
+while opcaoSelecionada != 10:
 	opcaoSelecionada = menu()
 	if opcaoSelecionada == '1':
 		print('Iniciando a verificação de datas...')
@@ -491,6 +544,10 @@ while opcaoSelecionada != 8:
 		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_FIBRA_VAREJO',param)
 		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_NOVA_FIBRA',param)
 		executa_procedure_sql('SP_PC_TEND_IGUAL_REAL_TABELAS_FIBRA',param)
+		
+		msg = f'Tendencias igualadas ao Realizado! : {datetime.today()}'
+		enviaWhats(msg, num, key)
+		
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '6':
@@ -499,6 +556,9 @@ while opcaoSelecionada != 8:
 		executa_procedure_sql('SP_PC_BASES_SHAREPOINT',param)
 		ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
 		atualiza_TB_VALIDA_CARGA_TENDENCIA()
+		
+		msg = f'Bases liberadas para Sharepoint e PowerBi! : {datetime.today()}'
+		enviaWhats(msg, num, key)
 		
 		a = input('Tecle qualquer tecla para continuar...')
 
@@ -514,6 +574,10 @@ while opcaoSelecionada != 8:
 		executa_procedure_sql(proc, param)
 		proc = 'SP_PC_TBL_RE_RELATORIO_RC_V2_TEND'
 		executa_procedure_sql(proc, param)
+		
+		msg = f'Etapas de liberação do Ticket concluídas! : {datetime.today()}'
+		enviaWhats(msg, num, key)
+
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '8':
@@ -527,7 +591,12 @@ while opcaoSelecionada != 8:
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '9':
-		print('Opção 9...')
+		print('Opção 9...Enviar PDVs OUTROS')
+		EnviaPDVOutros()
+		a = input('Tecle qualquer tecla para continuar...')
+
+	elif opcaoSelecionada == '10':
+		print('Opção 10...SAIR')
 		break
 	else:
 		print('Opção Inválida')
