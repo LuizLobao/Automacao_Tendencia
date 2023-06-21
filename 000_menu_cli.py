@@ -23,6 +23,21 @@ AAAA_MM = (datetime.today()- timedelta(days=0)).strftime('%Y-%m')
 AAAAMM = (datetime.today()- timedelta(days=0)).strftime('%Y%m')
 resposta = ''
 
+def criar_conexao():
+    dados_conexao = (
+        "Driver={SQL Server};"
+        f"Server={segredos.db_server};"
+        f"Database={segredos.db_name};"
+        "Trusted_Connection=yes;"
+        # f"UID={segredos.db_user};"
+        # f"PWD={segredos.db_pass}"
+    )
+    return pyodbc.connect(dados_conexao)
+
+
+
+
+
 def menu():
 	subprocess.run('cls', shell=True)
 	print('----------------- Menu de Automacao de Atividades -----------------')
@@ -47,8 +62,13 @@ def menu():
 def data_mod_arquivo():
 	arquivo1 = f'Demonstrativo Gross_Analitico_{AAAAMM}.csv'
 	arquivo = (f'Y:\{arquivo1}')
-	modificado = time.strftime('%d/%m/%Y', time.gmtime(os.path.getmtime(arquivo)))
-	return (modificado)
+	try:
+		modificado = time.strftime('%d/%m/%Y', time.gmtime(os.path.getmtime(arquivo)))
+		return (modificado)
+	except:
+		print('Erro - arquivo Demonstrativo Gross nao encontrado')
+		data_erro = '01/01/1900 00:00:00'
+		return(data_erro)
 
 def puxa_dts_cargas(em_loop):
 	dicio = {"arquivo":"data","HOJE":hoje,"BOV_1066.TXT":'01/01/1900 00:00:00',"BOV_1065.TXT":'01/01/1900 00:00:00',"BOV_1059.TXT":'01/01/1900 00:00:00',"BOV_1067.TXT":'01/01/1900 00:00:00',"BOV_1064.TXT":'01/01/1900 00:00:00',"BOV_1058.TXT":'01/01/1900 00:00:00',"HADOOP_6162.TXT":'01/01/1900 00:00:00',"HADOOP_6163.TXT":'01/01/1900 00:00:00'}
@@ -183,23 +203,27 @@ def monta_tabdin_demonstrativo_gross():
 
 def executa_procedure_sql_simples():
 	
-	dados_conexao = (
-		"Driver={SQL Server};"
-		f"Server={segredos.db_server};"
-		f"Database={segredos.db_name};"
-		f"UID={segredos.db_user};"
-		f"PWD={segredos.db_pass}"
-	)
-	conexao = pyodbc.connect(dados_conexao)
+#	dados_conexao = (
+#		"Driver={SQL Server};"
+#		f"Server={segredos.db_server};"
+#		f"Database={segredos.db_name};"
+#		"Trusted_Connection=yes;"
+#		#f"UID={segredos.db_user};"
+#		#f"PWD={segredos.db_pass}"
+#	)
+#	conexao = pyodbc.connect(dados_conexao)
+	conexao = criar_conexao()
 	print("Conectado ao banco para executar PROCEDURE")
 
 	cursor = conexao.cursor()
 	
 	#executar procedure
-	procedure = 'SP_PC_NOVA_FIBRA_COM_TENDENCIA'
+	#procedure = 'SP_PC_NOVA_FIBRA_COM_TENDENCIA'
+	procedure = 'SP_CDO_TEND_VL_VLL_FIBRA_NOVA_FIBRA'
 	dh_inicio_proc = datetime.today().strftime('%Y%m%d %H:%M:%S')
 	print(f'Hora inicio execução procedure: {dh_inicio_proc}')
-	cursor.execute('SET NOCOUNT ON; EXEC SP_PC_NOVA_FIBRA_COM_TENDENCIA')
+	#cursor.execute('SET NOCOUNT ON; EXEC SP_PC_NOVA_FIBRA_COM_TENDENCIA')
+	cursor.execute('SET NOCOUNT ON; EXEC SP_CDO_TEND_VL_VLL_FIBRA_NOVA_FIBRA')
 	conexao.commit()
 
 	############# LOOP PARA VERIFICAR FIM DA PROCEDURE #############
@@ -211,8 +235,9 @@ def executa_procedure_sql_simples():
 			"Driver={SQL Server};"
 			f"Server={segredos.db_server};"
 			f"Database={segredos.db_name};"
-			f"UID={segredos.db_user};"
-			f"PWD={segredos.db_pass}"
+			"Trusted_Connection=yes;"
+			#f"UID={segredos.db_user};"
+			#f"PWD={segredos.db_pass}"
 		)
 		conn = pyodbc.connect(dados_conexao)
 		cursor = conn.cursor()
@@ -247,15 +272,17 @@ def executa_procedure_sql_simples():
 def montaExcelTendVll():
 	comando_sql = '''SELECT DATA,
 					FILIAL,
-					SUM(QTD) AS [TEND]
-					FROM tbl_pc_tend_nova_fibra_vll
+					SUM(QTD_DEV) AS [TEND]
+					FROM TBL_CDO_TEND_NOVA_FIBRA_VLL
+					WHERE LEFT(DATA,6) = (SELECT MAX(left(data, 6)) FROM TBL_CDO_TEND_NOVA_FIBRA_VLL)
 					GROUP BY DATA, FILIAL'''
 	dados_conexao = (
 		"Driver={SQL Server};"
 		f"Server={segredos.db_server};"
 		f"Database={segredos.db_name};"
-		f"UID={segredos.db_user};"
-		f"PWD={segredos.db_pass}"
+		"Trusted_Connection=yes;"
+		#f"UID={segredos.db_user};"
+		#f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
 	#print("Conectado")
@@ -307,8 +334,9 @@ def executa_procedure_sql(nome_procedure, param):
         "Driver={SQL Server};"
         f"Server={segredos.db_server};"
         f"Database={segredos.db_name};"
-        f"UID={segredos.db_user};"
-        f"PWD={segredos.db_pass}"
+        "Trusted_Connection=yes;"
+		#f"UID={segredos.db_user};"
+        #f"PWD={segredos.db_pass}"
     )
     conexao = pyodbc.connect(dados_conexao)
     print('\x1b[1;33;42m' + 'Conexão realizada ao banco de dados' + '\x1b[0m')
@@ -332,8 +360,9 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22():
 		"Driver={SQL Server};"
 		f"Server={segredos.db_server};"
 		f"Database={segredos.db_name};"
-		f"UID={segredos.db_user};"
-		f"PWD={segredos.db_pass}"
+		"Trusted_Connection=yes;"
+		#f"UID={segredos.db_user};"
+		#f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
 	print("Conectado ao banco para alterar a procedure - retirar comentários")
@@ -354,8 +383,9 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
 		"Driver={SQL Server};"
 		f"Server={segredos.db_server};"
 		f"Database={segredos.db_name};"
-		f"UID={segredos.db_user};"
-		f"PWD={segredos.db_pass}"
+		"Trusted_Connection=yes;"
+		#f"UID={segredos.db_user};"
+		#f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
 	print("Conectado ao banco para alterar a procedure - retirar comentários")
@@ -377,8 +407,9 @@ def atualiza_TB_VALIDA_CARGA_TENDENCIA():
 		"Driver={SQL Server};"
 		f"Server={segredos.db_server};"
 		f"Database={segredos.db_name};"
-		f"UID={segredos.db_user};"
-		f"PWD={segredos.db_pass}"
+		"Trusted_Connection=yes;"
+		#f"UID={segredos.db_user};"
+		#f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
 	print("Conectado ao banco para dar update")
@@ -470,8 +501,9 @@ def EnviaPDVOutros():
 		"Driver={SQL Server};"
 		f"Server={segredos.db_server};"
 		f"Database={segredos.db_name};"
-		f"UID={segredos.db_user};"
-		f"PWD={segredos.db_pass}"
+		"Trusted_Connection=yes;"
+		#f"UID={segredos.db_user};"
+		#f"PWD={segredos.db_pass}"
 	)
 	conexao = pyodbc.connect(dados_conexao)
 	cursor = conexao.cursor()
