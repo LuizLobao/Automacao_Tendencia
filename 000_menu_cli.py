@@ -226,44 +226,44 @@ def executa_procedure_sql_simples():
 	cursor.execute('SET NOCOUNT ON; EXEC SP_CDO_TEND_VL_VLL_FIBRA_NOVA_FIBRA')
 	conexao.commit()
 
-	############# LOOP PARA VERIFICAR FIM DA PROCEDURE #############
-	def verifica_fim_procedure (procedure, dh_inicio_proc):
-		tentativas = 1
-		dh_fim_proc = dh_inicio_proc
-
-		dados_conexao = (
-			"Driver={SQL Server};"
-			f"Server={segredos.db_server};"
-			f"Database={segredos.db_name};"
-			"Trusted_Connection=yes;"
-			#f"UID={segredos.db_user};"
-			#f"PWD={segredos.db_pass}"
-		)
-		conn = pyodbc.connect(dados_conexao)
-		cursor = conn.cursor()
-		comando_sql = f"SELECT max(DATA_HORA) as DATA_HORA FROM TBL_PC_TEMPO_PROCEDURES WHERE [PROCEDURE] = '{procedure}' AND INI_FIM = 'FIM'"
-		
-		while dh_fim_proc <= dh_inicio_proc:
-	
-			print(f'Aguardando Fim da procedure. Tentativa: {tentativas}')
-			cursor.execute(comando_sql)
-			row = cursor.fetchone()
-			dh_fim_proc = row.DATA_HORA.strftime('%Y%m%d %H:%M:%S')
-
-			print(f'Hora fim da execução da procedure: {dh_fim_proc}')
-
-			if (dh_fim_proc > dh_inicio_proc):
-				print('Procedure concluida. Continuando...')
-				conn.close()
-				return
-			
-			print('Procedure não concluida. Esperar mais 1 min')
-			time.sleep(60)
-			tentativas = tentativas + 1
-		return
-	
-	
-	verifica_fim_procedure(procedure, dh_inicio_proc)
+#	############# LOOP PARA VERIFICAR FIM DA PROCEDURE #############
+#	def verifica_fim_procedure (procedure, dh_inicio_proc):
+#		tentativas = 1
+#		dh_fim_proc = dh_inicio_proc
+#
+#		dados_conexao = (
+#			"Driver={SQL Server};"
+#			f"Server={segredos.db_server};"
+#			f"Database={segredos.db_name};"
+#			"Trusted_Connection=yes;"
+#			#f"UID={segredos.db_user};"
+#			#f"PWD={segredos.db_pass}"
+#		)
+#		conn = pyodbc.connect(dados_conexao)
+#		cursor = conn.cursor()
+#		comando_sql = f"SELECT max(DATA_HORA) as DATA_HORA FROM TBL_PC_TEMPO_PROCEDURES WHERE [PROCEDURE] = '{procedure}' AND INI_FIM = 'FIM'"
+#		
+#		while dh_fim_proc <= dh_inicio_proc:
+#	
+#			print(f'Aguardando Fim da procedure. Tentativa: {tentativas}')
+#			cursor.execute(comando_sql)
+#			row = cursor.fetchone()
+#			dh_fim_proc = row.DATA_HORA.strftime('%Y%m%d %H:%M:%S')
+#
+#			print(f'Hora fim da execução da procedure: {dh_fim_proc}')
+#
+#			if (dh_fim_proc > dh_inicio_proc):
+#				print('Procedure concluida. Continuando...')
+#				conn.close()
+#				return
+#			
+#			print('Procedure não concluida. Esperar mais 1 min')
+#			time.sleep(60)
+#			tentativas = tentativas + 1
+#		return
+#	
+#	
+#	verifica_fim_procedure(procedure, dh_inicio_proc)
 	############# FIM DO LOOP PARA VERIFICAR FIM DA PROCEDURE #############
 	
 	conexao.close()
@@ -276,15 +276,18 @@ def montaExcelTendVll():
 					FROM TBL_CDO_TEND_NOVA_FIBRA_VLL
 					WHERE LEFT(DATA,6) = (SELECT MAX(left(data, 6)) FROM TBL_CDO_TEND_NOVA_FIBRA_VLL)
 					GROUP BY DATA, FILIAL'''
-	dados_conexao = (
-		"Driver={SQL Server};"
-		f"Server={segredos.db_server};"
-		f"Database={segredos.db_name};"
-		"Trusted_Connection=yes;"
-		#f"UID={segredos.db_user};"
-		#f"PWD={segredos.db_pass}"
-	)
-	conexao = pyodbc.connect(dados_conexao)
+	#dados_conexao = (
+	#	"Driver={SQL Server};"
+	#	f"Server={segredos.db_server};"
+	#	f"Database={segredos.db_name};"
+	#	"Trusted_Connection=yes;"
+	#	#f"UID={segredos.db_user};"
+	#	#f"PWD={segredos.db_pass}"
+	#)
+	#conexao = pyodbc.connect(dados_conexao)
+	conexao = criar_conexao()
+
+
 	#print("Conectado")
 	cursor = conexao.cursor()
 	df=pd.read_sql(comando_sql, conexao)
@@ -330,15 +333,16 @@ def enviaEmaileAnexo():
 
 def executa_procedure_sql(nome_procedure, param):
   
-    dados_conexao = (
-        "Driver={SQL Server};"
-        f"Server={segredos.db_server};"
-        f"Database={segredos.db_name};"
-        "Trusted_Connection=yes;"
-		#f"UID={segredos.db_user};"
-        #f"PWD={segredos.db_pass}"
-    )
-    conexao = pyodbc.connect(dados_conexao)
+    #dados_conexao = (
+    #    "Driver={SQL Server};"
+    #    f"Server={segredos.db_server};"
+    #    f"Database={segredos.db_name};"
+    #    "Trusted_Connection=yes;"
+	#	#f"UID={segredos.db_user};"
+    #    #f"PWD={segredos.db_pass}"
+    #)
+    #conexao = pyodbc.connect(dados_conexao)
+    conexao = criar_conexao()
     print('\x1b[1;33;42m' + 'Conexão realizada ao banco de dados' + '\x1b[0m')
 
     cursor = conexao.cursor()
@@ -356,15 +360,16 @@ def executa_procedure_sql(nome_procedure, param):
     print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
 
 def ATIVAR_TEND_TABLEAU_teste_Jan22():
-	dados_conexao = (
-		"Driver={SQL Server};"
-		f"Server={segredos.db_server};"
-		f"Database={segredos.db_name};"
-		"Trusted_Connection=yes;"
-		#f"UID={segredos.db_user};"
-		#f"PWD={segredos.db_pass}"
-	)
-	conexao = pyodbc.connect(dados_conexao)
+	#dados_conexao = (
+	#	"Driver={SQL Server};"
+	#	f"Server={segredos.db_server};"
+	#	f"Database={segredos.db_name};"
+	#	"Trusted_Connection=yes;"
+	#	#f"UID={segredos.db_user};"
+	#	#f"PWD={segredos.db_pass}"
+	#)
+	#conexao = pyodbc.connect(dados_conexao)
+	conexao = criar_conexao()
 	print("Conectado ao banco para alterar a procedure - retirar comentários")
 	
         # Defina o caminho do arquivo .sql
@@ -379,15 +384,16 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22():
 	print('Conexão Fechada')
 
 def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
-	dados_conexao = (
-		"Driver={SQL Server};"
-		f"Server={segredos.db_server};"
-		f"Database={segredos.db_name};"
-		"Trusted_Connection=yes;"
-		#f"UID={segredos.db_user};"
-		#f"PWD={segredos.db_pass}"
-	)
-	conexao = pyodbc.connect(dados_conexao)
+	#dados_conexao = (
+	#	"Driver={SQL Server};"
+	#	f"Server={segredos.db_server};"
+	#	f"Database={segredos.db_name};"
+	#	"Trusted_Connection=yes;"
+	#	#f"UID={segredos.db_user};"
+	#	#f"PWD={segredos.db_pass}"
+	#)
+	#conexao = pyodbc.connect(dados_conexao)
+	conexao = criar_conexao()
 	print("Conectado ao banco para alterar a procedure - retirar comentários")
 	
         # Defina o caminho do arquivo .sql
@@ -403,15 +409,16 @@ def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
 
 def atualiza_TB_VALIDA_CARGA_TENDENCIA():
 	comando_sql='update TB_VALIDA_CARGA_TENDENCIA set DATA_CARGA = convert(varchar, getdate(), 120 )'
-	dados_conexao = (
-		"Driver={SQL Server};"
-		f"Server={segredos.db_server};"
-		f"Database={segredos.db_name};"
-		"Trusted_Connection=yes;"
-		#f"UID={segredos.db_user};"
-		#f"PWD={segredos.db_pass}"
-	)
-	conexao = pyodbc.connect(dados_conexao)
+	#dados_conexao = (
+	#	"Driver={SQL Server};"
+	#	f"Server={segredos.db_server};"
+	#	f"Database={segredos.db_name};"
+	#	"Trusted_Connection=yes;"
+	#	#f"UID={segredos.db_user};"
+	#	#f"PWD={segredos.db_pass}"
+	#)
+	#conexao = pyodbc.connect(dados_conexao)
+	conexao = criar_conexao()
 	print("Conectado ao banco para dar update")
 	cursor = conexao.cursor()
 	cursor.execute(comando_sql)
@@ -497,15 +504,16 @@ def enviaWhats (mensagem, numero, apikey):
 
 def EnviaPDVOutros():
 	comando_sql = 'select * from [VW_COD_SAP_OUTROS] order by qtd desc'
-	dados_conexao = (
-		"Driver={SQL Server};"
-		f"Server={segredos.db_server};"
-		f"Database={segredos.db_name};"
-		"Trusted_Connection=yes;"
-		#f"UID={segredos.db_user};"
-		#f"PWD={segredos.db_pass}"
-	)
-	conexao = pyodbc.connect(dados_conexao)
+	#dados_conexao = (
+	#	"Driver={SQL Server};"
+	#	f"Server={segredos.db_server};"
+	#	f"Database={segredos.db_name};"
+	#	"Trusted_Connection=yes;"
+	#	#f"UID={segredos.db_user};"
+	#	#f"PWD={segredos.db_pass}"
+	#)
+	#conexao = pyodbc.connect(dados_conexao)
+	conexao = criar_conexao()
 	cursor = conexao.cursor()
 	df=pd.read_sql(comando_sql, conexao)
 	os.makedirs('PDV_OUTROS', exist_ok=True)  
