@@ -32,6 +32,21 @@ def make_window(theme=None):
     treedata.Insert("", '_B_', 'B', [])
     treedata.Insert("_A_", '_A1_', 'Sub Item 1', ['can', 'be', 'anything'], )
 
+    frame_demonstrativo_gross = [
+        [sg.Text('Processo Demonstrativo Gross')],
+        [sg.Checkbox('Copiar Arquivo',disabled=False, default=1),sg.Checkbox('Gerar Tab_Din',disabled=False, default=1), sg.Button('iniciar', disabled=True)],
+        [sg.ProgressBar(100, orientation='h', s=(47,20))],
+    ]
+    frame_processo_VL_VLL_Legado = [
+        [sg.Text('Processo VL/VLL Legado')],
+        [sg.Checkbox('Executa Procedure',disabled=False, default=1),sg.Checkbox('Monta Excel',disabled=False, default=1),sg.Checkbox('Envia Email',disabled=False, default=1), sg.Button('iniciar', disabled=True)],
+        [sg.ProgressBar(100, orientation='h', s=(47,20))],
+    ]
+    frame_iguala_tendencias = [
+        [sg.Text('Processo Igualar Tendencia = Real')],
+        [sg.Checkbox('Iguala X',disabled=False, default=1),sg.Checkbox('Iguala Y',disabled=False, default=1),sg.Checkbox('Iguala Z',disabled=False, default=1), sg.Button('iniciar', disabled=True)],
+        [sg.ProgressBar(100, orientation='h', s=(47,20))],
+    ]
     layout_esquerda = [
                        [sg.Text('Rotinas para Tendência')],
                        [name('Verificar Disponibilidade de Arquivos'), sg.Button('atualizar', k='-MON_CARGA-')],
@@ -45,11 +60,15 @@ def make_window(theme=None):
                         [sg.Text('')],
                         [name('Processo VLL Nova Fibra (6162 e 6163)'), sg.Button('iniciar', disabled=True)],
                         [sg.Output(s=(40,3))],
-                        [name('Processo Demonstrativo Gross'), sg.Button('iniciar', disabled=True)],
-                        [sg.Output(s=(40,3))],
-                        [name('Processo VL/VLL Legado'), sg.Button('iniciar', disabled=True)],
-                        [sg.Output(s=(40,3)), sg.Button('abrir excel', disabled=True)],
-                        [name('Iguala Real e Tendência'), sg.Button('iniciar', disabled=True)],
+                        #[name('Processo Demonstrativo Gross'), sg.Button('iniciar', disabled=True)],
+                        #[sg.Output(s=(40,3))],
+                        [sg.Frame('Demontrativo de Gross', frame_demonstrativo_gross)],
+                        #[name('Processo VL/VLL Legado'), sg.Button('iniciar', disabled=True)],
+                        [sg.Frame('VL/VLL Legado', frame_processo_VL_VLL_Legado)],
+                        #[sg.Output(s=(40,3)), sg.Button('abrir excel', disabled=True)],
+                        [sg.Frame('Tendência = Real', frame_iguala_tendencias)],
+
+                        #[name('Iguala Real e Tendência'), sg.Button('iniciar', disabled=True)],
                         ]
 
 

@@ -1,22 +1,20 @@
-import openpyxl
-import os
-import pandas as pd
-import pyodbc
-import requests
-import segredos
-import shutil
-import subprocess
-import time
-import win32com.client as win32
+#TODO Salvar status de cada etapa. Só rodar a seguinte se a anterior ja rodou
+#TODO estudar a possibilidade de passar uma lista de PROCEDURES e rodar em Loop - desta forma realiza 1 unica conexao
 
+import shutil,os,time,pyodbc, segredos, openpyxl, subprocess, requests
+import win32com.client as win32
+import pandas as pd
+from urllib.parse import quote
+#from telnetlib import theNULL
 from datetime import date, datetime, timedelta
-from PIL import ImageGrab
 from playwright.sync_api import sync_playwright
 from tqdm import tqdm
-from urllib.parse import quote
+from PIL import ImageGrab
 
+#Para envio de WhatsApp
 num= segredos.num
 key = segredos.key
+
 
 #FIXME caso deixe o programa rodando de um dia para o outro a variavel não atualiza - causando problemas no dia seguinte 
 hoje = (datetime.today()- timedelta(days=0)).strftime('%d/%m/%Y') 
@@ -24,14 +22,6 @@ AAAAMMDD = (datetime.today()- timedelta(days=0)).strftime('%Y%m%d')
 AAAA_MM = (datetime.today()- timedelta(days=0)).strftime('%Y-%m') 
 AAAAMM = (datetime.today()- timedelta(days=0)).strftime('%Y%m')
 resposta = ''
-
-def atualiza_variaveis_data():
-	hoje = (datetime.today()- timedelta(days=0)).strftime('%d/%m/%Y') 
-	AAAAMMDD = (datetime.today()- timedelta(days=0)).strftime('%Y%m%d') 
-	AAAA_MM = (datetime.today()- timedelta(days=0)).strftime('%Y-%m') 
-	AAAAMM = (datetime.today()- timedelta(days=0)).strftime('%Y%m')
-
-
 
 def criar_conexao():
     dados_conexao = (
@@ -44,6 +34,10 @@ def criar_conexao():
     )
     return pyodbc.connect(dados_conexao)
 
+
+
+
+
 def menu():
 	subprocess.run('cls', shell=True)
 	print('----------------- Menu de Automacao de Atividades -----------------')
@@ -51,20 +45,15 @@ def menu():
 	print(f'Data de Hoje: {hoje}')
 	print('')
 	print('1) Verificar as datas no MONITOR DE CARGA e Demonstrativo do Gross')
-	print('2) Verifica datas para o JETL - Processo CDO')
-	print('3) Copiar o Demonstrativo do Gross e montar tabela dinâmica')
-	print('4) Executar processo da Nova Fibra - rodar depois de executar o JETL')
-	print('5) Processos CDO - rodar depois de executar o JETL e depois da etapa 4')
-	print('6) Executar procedures para o Legado')
-	print('7) Update Tendências = Real')
-	print('---------------------------------------------------------------------')
-	print('      Rodar o processo de tendencia no excel e UPDATES               ')
-	print('---------------------------------------------------------------------')
-	print('8) Procedures Finais - usar depois de atualizar a tendência manualmente')
-	print('9) Procedures Receita Contratada')
-	print('10) Envia E-mail Tendencias Liberadas')
-	print('11) Envia Lista de PDV Outros')
-	print('12) Sair')
+	print('2) Copiar o Demonstrativo do Gross e montar tabela dinâmica')
+	print('3) Executar processo da Nova Fibra')
+	print('4) Executar procedures para o Legado')
+	print('5) Update Tendências = Real')
+	print('6) Procedures Finais - usar depois de atualizar a tendência manualmente')
+	print('7) Procedures Receita Contratada')
+	print('8) Envia E-mail Tendencias Liberadas')
+	print('9) Envia Lista de PDV Outros')
+	print('10) Sair')
 	print('-------------------------------------------------------------------')
 	selecionada =  input(('Selecione uma das opções acima: #'))
 	print(f'A opção selecionda foi: {selecionada}')
@@ -80,42 +69,6 @@ def data_mod_arquivo():
 		print('Erro - arquivo Demonstrativo Gross nao encontrado')
 		data_erro = '01/01/1900 00:00:00'
 		return(data_erro)
-
-def puxa_dts_jetl(relatorio, aplicacao):
-    with sync_playwright() as p:
-        navegador = p.chromium.launch(headless=True)
-        pagina = navegador.new_page()
-        pagina.goto(f"https://portalbi.telemar/AdminRelBatchCadastroJETL.aspx?idRelatorio={relatorio}&idAplicacao={aplicacao}")
-
-        pagina.wait_for_load_state('load')
-
-        linha = 2
-        while True:  # Run until the end of the page (infinite loop)
-            try:
-                # Try to locate the elements for the current row
-                # If the elements are not found, it will raise an exception, and the loop will stop
-                # Otherwise, it will continue to the next row
-                periodo_de = pagina.locator(f'xpath = //*[@id="lbl1"]/table/tbody/tr[{linha}]/td[5]/font/b').text_content()
-                periodo_ate = pagina.locator(f'xpath = //*[@id="lbl1"]/table/tbody/tr[{linha}]/td[6]/font/b').text_content()
-                data_criacao = pagina.locator(f'xpath = //*[@id="lbl1"]/table/tbody/tr[{linha}]/td[8]/font/b').text_content()
-
-                try:
-                    imagem = pagina.query_selector(f'//*[@id="lbl1"]/table/tbody/tr[{linha}]/td[10]/font/b/img')
-                    texto_alt = imagem.get_attribute('src')
-                except:
-                    imagem = pagina.query_selector(f'//*[@id="lbl1"]/table/tbody/tr[{linha}]/td[10]/font/b/a/img')
-                    texto_alt = imagem.get_attribute('src')
-
-                print(relatorio, periodo_de, periodo_ate, data_criacao, texto_alt)
-                linha += 1
-
-            except Exception as e:
-                # If an exception is raised, it means we have reached the end of the page, so break the loop.
-                print("Fim da página.")
-                break
-
-        print('')
-        navegador.close()
 
 def puxa_dts_cargas(em_loop):
 	
@@ -205,7 +158,7 @@ def puxa_dts_cargas(em_loop):
 			colocar_puxa_dts_carga_em_loop(em_loop)
 	except:
 		print('ERRO COM O MONITOR DE CARGA')
-	
+
 def colocar_puxa_dts_carga_em_loop(em_loop):
 	if em_loop.lower() == 'n':
 		resposta = input('Gostaria de colocar o check em Loop ? (s/n):')
@@ -255,14 +208,13 @@ def monta_tabdin_demonstrativo_gross():
 def executa_procedure_sql_combinada(nome_procedure, param=None):
     conexao = criar_conexao()
     print('\x1b[1;33;42m' + 'Conexão realizada ao banco de dados' + '\x1b[0m')
-    inicio_procedure = datetime.today()
-    
+
     try:
         cursor = conexao.cursor()
 
         if param:
             # Executa a procedure com parâmetro
-            
+            inicio_procedure = datetime.today()
             print('\x1b[1;33;44m' + f'Executando a Procedure {nome_procedure} para o parâmetro: {param} '+ '\x1b[0m')
             print(f'Iniciando execução em: {inicio_procedure}')
             cursor.execute(f'SET NOCOUNT ON; EXEC {nome_procedure} {param}')
@@ -281,6 +233,28 @@ def executa_procedure_sql_combinada(nome_procedure, param=None):
     finally:
         conexao.close()
         print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
+
+
+
+#def executa_procedure_sql_simples():
+#	
+#
+#	conexao = criar_conexao()
+#	print("Conectado ao banco para executar PROCEDURE")
+#
+#	cursor = conexao.cursor()
+#	
+#	#executar procedure
+#	#procedure = 'SP_PC_NOVA_FIBRA_COM_TENDENCIA'
+#	procedure = 'SP_CDO_TEND_VL_VLL_FIBRA_NOVA_FIBRA'
+#	dh_inicio_proc = datetime.today().strftime('%Y%m%d %H:%M:%S')
+#	print(f'Hora inicio execução procedure: {dh_inicio_proc}')
+#	#cursor.execute('SET NOCOUNT ON; EXEC SP_PC_NOVA_FIBRA_COM_TENDENCIA')
+#	cursor.execute('SET NOCOUNT ON; EXEC SP_CDO_TEND_VL_VLL_FIBRA_NOVA_FIBRA')
+#	conexao.commit()
+#
+#	conexao.close()
+#	print('Conexão da PROCEDURE Fechada')
 
 def montaExcelTendVll():
 	comando_sql = '''SELECT DATA,
@@ -336,26 +310,56 @@ def enviaEmaileAnexo():
 	email.Send()
 	print("Email Enviado")
 
-def executa_arquivo_sql(arquivo_sql):
-    conexao = criar_conexao()
-    print("Conectado ao banco para alterar a procedure - retirar comentários")
+#def executa_procedure_sql(nome_procedure, param):
+#  
+#    conexao = criar_conexao()
+#    print('\x1b[1;33;42m' + 'Conexão realizada ao banco de dados' + '\x1b[0m')
+#
+#    cursor = conexao.cursor()
+#    
+#    #executa procedure
+#    inicio_procedure = datetime.today()
+#    print('\x1b[1;33;44m' + f'Executando a Procedure {nome_procedure} para o parâmetro: {param} '+ '\x1b[0m')
+#    print(f'Iniciando execução em: {inicio_procedure}')
+#    cursor.execute(f'SET NOCOUNT ON; EXEC {nome_procedure}  {param}')
+#    conexao.commit()
+#    fim_procedure = datetime.today()
+#    print(f"Procedure executada em {fim_procedure - inicio_procedure} tempo")
+#    
+#    conexao.close()
+#    print('\x1b[1;33;41m' + 'Conexão Fechada'+ '\x1b[0m')
 
-    try:
+def ATIVAR_TEND_TABLEAU_teste_Jan22():
+
+	conexao = criar_conexao()
+	print("Conectado ao banco para alterar a procedure - retirar comentários")
+	
         # Defina o caminho do arquivo .sql
-        caminho_arquivo_sql = arquivo_sql
+	caminho_arquivo_sql = r'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\ativar_tendencia_2023.sql'
+        
+	with open(caminho_arquivo_sql, 'r', encoding='utf-8') as arquivo:
+		conteudo_sql = arquivo.read()
+		cursor = conexao.cursor()
+		cursor.execute(conteudo_sql)
+		conexao.commit()
+	conexao.close()
+	print('Conexão Fechada')
 
-        with open(caminho_arquivo_sql, 'r', encoding='utf-8') as arquivo:
-            conteudo_sql = arquivo.read()
-            cursor = conexao.cursor()
-            cursor.execute(conteudo_sql)
-            conexao.commit()
+def ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra():
 
-    except Exception as e:
-        print(f"Erro ao executar o arquivo SQL: {e}")
-    
-    finally:
-        conexao.close()
-        print('Conexão Fechada')
+	conexao = criar_conexao()
+	print("Conectado ao banco para alterar a procedure - retirar comentários")
+	
+        # Defina o caminho do arquivo .sql
+	caminho_arquivo_sql = r'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\ativar_tendencia_somente_fibra_2023.sql'
+        
+	with open(caminho_arquivo_sql, 'r', encoding='utf-8') as arquivo:
+		conteudo_sql = arquivo.read()
+		cursor = conexao.cursor()
+		cursor.execute(conteudo_sql)
+		conexao.commit()
+	conexao.close()
+	print('Conexão Fechada')
 
 def atualiza_TB_VALIDA_CARGA_TENDENCIA():
 	comando_sql='update TB_VALIDA_CARGA_TENDENCIA set DATA_CARGA = convert(varchar, getdate(), 120 )'
@@ -483,9 +487,10 @@ def EnviaPDVOutros():
 	# save or send the message
 	message.Send()
 
+
 param = AAAAMM
 opcaoSelecionada = 0
-while opcaoSelecionada != 12:
+while opcaoSelecionada != 10:
 	opcaoSelecionada = menu()
 	if opcaoSelecionada == '1':
 		print('Iniciando a verificação de datas...')
@@ -493,51 +498,28 @@ while opcaoSelecionada != 12:
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '2':
-		print('Opção 2...Verificando datas para o JETL')
-		print('Rel  DE        ATE       CRIACAO              IMAGEM')
-		puxa_dts_jetl(6163,11)
-		puxa_dts_jetl(6162,11)
-		puxa_dts_jetl(1059,1)
-		puxa_dts_jetl(1066,1)
-		print('Caso todos os arquivos com a data de HOJE estiverem com a imagem DOWNLOAD, iniciar o JOB no JETL')
-		a = input('Tecle qualquer tecla para continuar...')
-
-	elif opcaoSelecionada == '3':
-		print('Opção 3...')
+		print('Opção 2...')
 		copia_arquivo_renomeia()
 		monta_tabdin_demonstrativo_gross()
 		a = input('Tecle qualquer tecla para continuar...')
 
+	elif opcaoSelecionada == '3':
+		print('Opção 3...')
+		#executa_procedure_sql_simples()
+		executa_procedure_sql_combinada('SP_CDO_TEND_VL_VLL_FIBRA_NOVA_FIBRA')
+		montaExcelTendVll()
+		enviaEmaileAnexo()
+		a = input('Tecle qualquer tecla para continuar...')
+
 	elif opcaoSelecionada == '4':
 		print('Opção 4...')
-		print('Executando procedure SP_CDO_TEND_VL_VLL_FIBRA_NOVA_FIBRA...')
-		executa_procedure_sql_combinada('SP_CDO_TEND_VL_VLL_FIBRA_NOVA_FIBRA')
-		
-		print('Montando Excel da TENDENCIA de VLL...')
-		montaExcelTendVll()
-		
-		print('Enviando e-mail para Amado ...')
-		enviaEmaileAnexo()
-		
-		a = input('Tecle qualquer tecla para continuar...')
-	
-	elif opcaoSelecionada == '5':
-		print('Opção 5...Processos CDO')
-		print('TENDENCIA = REAL para tabela CDO')
-		executa_procedure_sql_combinada('SP_CDO_0001_TENDENCIA_IGUAL_REAL',param)
-		print('Puxa TENDENCIA VLL NOVA FIBRA para tabela CDO')
-		executa_procedure_sql_combinada('SP_CDO_0002_TENDENCIA_VLL',param)
-
-		a = input('Tecle qualquer tecla para continuar...')
-
-	elif opcaoSelecionada == '6':
-		print('Opção 6...')
 		param = datetime.today().strftime('%Y%m')
+		#executa_procedure_sql('SP_PC_Insert_Tendencia_Auto_Fibra',param)
 		executa_procedure_sql_combinada('SP_PC_Insert_Tendencia_Auto_Fibra', param)
 		a = input('Tecle qualquer tecla para continuar...')
 
-	elif opcaoSelecionada == '7':
-		print('Opção 7...')
+	elif opcaoSelecionada == '5':
+		print('Opção 5...')
 		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_FIBRA_EMPRESARIAL',param)
 		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_FIBRA_VAREJO',param)
 		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_NOVA_FIBRA',param)
@@ -548,33 +530,28 @@ while opcaoSelecionada != 12:
 		
 		a = input('Tecle qualquer tecla para continuar...')
 
-	elif opcaoSelecionada == '8':
-		print('Opção 8...')
-
-		caminho_arquivo_sql = r'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\ativar_tendencia_2023.sql'
-		executa_arquivo_sql(caminho_arquivo_sql)
-		
+	elif opcaoSelecionada == '6':
+		print('Opção 6...')
+		#ATIVAR_TEND_TABLEAU_teste_Jan22()
 		executa_procedure_sql_combinada('SP_PC_BASES_SHAREPOINT',param)
-		
-		caminho_arquivo_sql_somente_fibra = r'S:\\Resultados\\01_Relatorio Diario\\1 - Base Eventos\\02 - TENDÊNCIA\\ativar_tendencia_somente_fibra_2023.sql'
-		executa_arquivo_sql(caminho_arquivo_sql_somente_fibra)
-				
+		#ATIVAR_TEND_TABLEAU_teste_Jan22_somenteFibra()
 		atualiza_TB_VALIDA_CARGA_TENDENCIA()
+		
 		msg = f'Bases liberadas para Sharepoint e PowerBi! : {datetime.today()}'
 		enviaWhats(msg, num, key)
 		
 		a = input('Tecle qualquer tecla para continuar...')
 
-	elif opcaoSelecionada == '9':
-		print('Opção 9...')
+	elif opcaoSelecionada == '7':
+		print('Opção 7...')
 		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_Tendencia_porRegiao'
 		executa_procedure_sql_combinada(proc, param)
 		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_Tendencia_porRegiao_IndCombo'
 		executa_procedure_sql_combinada(proc, param)
-		#proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_DIARIO_porRegiao'
-		#executa_procedure_sql_combinada(proc, param)
-		#proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_DIARIO_porRegiao_IndCombo'
-		#executa_procedure_sql_combinada(proc, param)
+		proc = 'SP_PC_Update_Ticket_Fibra_VAREJO_DIARIO_porRegiao'
+		executa_procedure_sql_combinada(proc, param)
+		proc = 'SP_PC_Update_Ticket_Fibra_EMPRESARIAL_DIARIO_porRegiao_IndCombo'
+		executa_procedure_sql_combinada(proc, param)
 		proc = 'SP_PC_TBL_RE_RELATORIO_RC_V2_TEND'
 		executa_procedure_sql_combinada(proc, param)
 		
@@ -583,8 +560,8 @@ while opcaoSelecionada != 12:
 
 		a = input('Tecle qualquer tecla para continuar...')
 
-	elif opcaoSelecionada == '10':
-		print('Opção 10...')
+	elif opcaoSelecionada == '8':
+		print('Opção 8...')
 		diretorio_arquivo_origem=r'S:\Resultados\01_Relatorio Diario\1 - Base Eventos\02 - TENDÊNCIA\TEND_FIBRA_e_UPDATEs.xlsx'
 		diretorio_arquivo_destino=r'S:\Resultados\01_Relatorio Diario\1 - Base Eventos\02 - TENDÊNCIA\tend_email.xlsx'
 		planilha_origem='UPDATE_TENDENCIA_VLL'
@@ -593,15 +570,14 @@ while opcaoSelecionada != 12:
 		enviaEmailFimProcesso()
 		a = input('Tecle qualquer tecla para continuar...')
 
-	elif opcaoSelecionada == '11':
-		print('Opção 11...Enviar PDVs OUTROS')
+	elif opcaoSelecionada == '9':
+		print('Opção 9...Enviar PDVs OUTROS')
 		EnviaPDVOutros()
 		a = input('Tecle qualquer tecla para continuar...')
 
-	elif opcaoSelecionada == '12':
-		print('Opção 12...SAIR')
+	elif opcaoSelecionada == '10':
+		print('Opção 10...SAIR')
 		break
-
 	else:
 		print('Opção Inválida')
 
