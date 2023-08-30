@@ -31,8 +31,6 @@ def atualiza_variaveis_data():
 	AAAA_MM = (datetime.today()- timedelta(days=0)).strftime('%Y-%m') 
 	AAAAMM = (datetime.today()- timedelta(days=0)).strftime('%Y%m')
 
-
-
 def criar_conexao():
     dados_conexao = (
         "Driver={SQL Server};"
@@ -64,22 +62,31 @@ def menu():
 	print('9) Procedures Receita Contratada')
 	print('10) Envia E-mail Tendencias Liberadas')
 	print('11) Envia Lista de PDV Outros')
-	print('12) Sair')
+	print('12) Gravar Tendência CDO no Histórico')
+	print('13) Sair')
 	print('-------------------------------------------------------------------')
 	selecionada =  input(('Selecione uma das opções acima: #'))
 	print(f'A opção selecionda foi: {selecionada}')
 	return selecionada
 
 def data_mod_arquivo():
-	arquivo1 = f'Demonstrativo Gross_Analitico_{AAAAMM}.csv'
-	arquivo = (f'Y:\{arquivo1}')
-	try:
-		modificado = time.strftime('%d/%m/%Y', time.gmtime(os.path.getmtime(arquivo)))
-		return (modificado)
-	except:
-		print('Erro - arquivo Demonstrativo Gross nao encontrado')
-		data_erro = '01/01/1900 00:00:00'
-		return(data_erro)
+    arquivo1 = f'Demonstrativo Gross_Analitico_{AAAAMM}.csv'
+    arquivo = f'Y:\{arquivo1}'
+
+    # Verifica o tamanho do arquivo em KB
+    tamanho_kb = os.path.getsize(arquivo) / 1024
+
+    if tamanho_kb <= 10:
+        print('Erro - arquivo tem tamanho menor ou igual a 10 KB')
+        return None
+    else:
+        try:
+            modificado = time.strftime('%d/%m/%Y', time.gmtime(os.path.getmtime(arquivo)))
+            return modificado
+        except:
+            print('Erro - arquivo Demonstrativo Gross nao encontrado')
+            data_erro = '01/01/1900 00:00:00'
+            return data_erro
 
 def puxa_dts_jetl(relatorio, aplicacao):
     with sync_playwright() as p:
@@ -237,7 +244,8 @@ def monta_tabdin_demonstrativo_gross():
                                                                                                         columns="MERCADO", 
                                                                                                         aggfunc=sum,
                                                                                                         fill_value=0,
-                                                                                                        margins=True, margins_name="INSTALACAO",
+                                                                                                        margins=True, 
+																										margins_name="INSTALACAO",
                                                                                                         )
     df2=df[df['TIPO'].str.contains("MIGRACAO")]
     pt_migracao = df2.query('TIPO == "MIGRACAO"'and 'MERCADO in ("EMPRESARIAL","VAREJO")').pivot_table(
@@ -246,7 +254,8 @@ def monta_tabdin_demonstrativo_gross():
                                                                                                         index="MERCADO", 
                                                                                                         aggfunc=sum,
                                                                                                         fill_value=0,
-                                                                                                        margins=True, margins_name="MIGRACAO",
+                                                                                                        margins=True, 
+																										margins_name="MIGRACAO",
                                                                                                         )
     with pd.ExcelWriter(dest_filename) as writer:
         pt_instalacao.to_excel(writer, sheet_name="TabDin",startcol=0, startrow=0)
@@ -485,7 +494,7 @@ def EnviaPDVOutros():
 
 param = AAAAMM
 opcaoSelecionada = 0
-while opcaoSelecionada != 12:
+while opcaoSelecionada != 13:
 	opcaoSelecionada = menu()
 	if opcaoSelecionada == '1':
 		print('Iniciando a verificação de datas...')
@@ -498,7 +507,7 @@ while opcaoSelecionada != 12:
 		puxa_dts_jetl(6163,11)
 		puxa_dts_jetl(6162,11)
 		puxa_dts_jetl(1059,1)
-		puxa_dts_jetl(1066,1)
+		puxa_dts_jetl(1065,1)
 		print('Caso todos os arquivos com a data de HOJE estiverem com a imagem DOWNLOAD, iniciar o JOB no JETL')
 		a = input('Tecle qualquer tecla para continuar...')
 
@@ -539,9 +548,16 @@ while opcaoSelecionada != 12:
 	elif opcaoSelecionada == '7':
 		print('Opção 7...')
 		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_FIBRA_EMPRESARIAL',param)
+		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_FIBRA_EMPRESARIAL_VL',param)
+		
 		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_FIBRA_VAREJO',param)
+		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_FIBRA_VAREJO_VL',param)
+		
 		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_NOVA_FIBRA',param)
+		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_NOVA_FIBRA_vl',param)
+
 		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_TABELAS_FIBRA',param)
+		executa_procedure_sql_combinada('SP_PC_TEND_IGUAL_REAL_TABELAS_FIBRA_VL',param)
 		
 		msg = f'Tendencias igualadas ao Realizado! : {datetime.today()}'
 		enviaWhats(msg, num, key)
@@ -599,7 +615,12 @@ while opcaoSelecionada != 12:
 		a = input('Tecle qualquer tecla para continuar...')
 
 	elif opcaoSelecionada == '12':
-		print('Opção 12...SAIR')
+		print('Opção 12...Gravando Historico de Tendencia CDO')
+		executa_procedure_sql_combinada('dbo.SP_CDO_0003_TENDENCIA_PARA_HISTORICO',param)
+		a = input('Tecle qualquer tecla para continuar...')
+
+	elif opcaoSelecionada == '13':
+		print('Opção 13...SAIR')
 		break
 
 	else:
